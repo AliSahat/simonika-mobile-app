@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../pool/pool_screen.dart';
-import '../notif/notif_screen.dart';
+// import '../notif/notif_screen.dart';
 import '../profile/profile_screen.dart';
 import '../history/history_screen.dart';
 
@@ -16,7 +16,6 @@ class _BnavContainerScreenState extends State<BnavContainerScreen> {
 
   final List<Widget> _screens = const [
     PoolScreen(),
-    NotifScreen(),
     HistoryScreen(),
     ProfileScreen(),
   ];
@@ -43,17 +42,12 @@ class _BnavContainerScreenState extends State<BnavContainerScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.pool_outlined),
             activeIcon: Icon(Icons.pool),
-            label: 'Pool',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_outlined),
-            activeIcon: Icon(Icons.notifications),
-            label: 'Notif',
+            label: 'Wadah',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.history_outlined),
             activeIcon: Icon(Icons.history),
-            label: 'History',
+            label: 'Riwayat',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),

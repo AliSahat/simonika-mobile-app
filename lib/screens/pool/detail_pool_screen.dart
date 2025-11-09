@@ -120,6 +120,36 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
     return "Rendah";
   }
 
+  String _getValveStatus() {
+    if (latestWaterData == null || poolData == null) return "Normal";
+
+    final distance = latestWaterData!['distance'].toDouble();
+    final keranTutup = poolData!['keranTutup'].toDouble();
+    final keranNormal = poolData!['keranNormal'].toDouble();
+    final keranBuka = poolData!['keranBuka'].toDouble();
+
+    // Check with tolerance of ±2 cm
+    if ((distance - keranTutup).abs() <= 2) return "Tertutup";
+    if ((distance - keranBuka).abs() <= 2) return "Terbuka";
+    return "Normal";
+  }
+
+  Color _getValveStatusColor() {
+    final status = _getValveStatus();
+    switch (status) {
+      case "Tertutup":
+        return Colors.red;
+      case "Terbuka":
+        return Colors.green;
+      default:
+        return Colors.blue;
+    }
+  }
+
+  bool _isValveOpen() {
+    return _getValveStatus() == "Terbuka";
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -532,6 +562,137 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
                               ),
                             ],
                           ),
+
+                          const SizedBox(height: 16),
+
+                          // Valve Status and Toggle Section
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: _getValveStatusColor().withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _getValveStatusColor().withOpacity(0.2),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: _getValveStatusColor()
+                                            .withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        _getValveStatus() == "Tertutup"
+                                            ? Icons.lock
+                                            : _getValveStatus() == "Terbuka"
+                                            ? Icons.lock_open
+                                            : Icons.water_drop,
+                                        color: _getValveStatusColor(),
+                                        size: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "Status Keran",
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          Text(
+                                            "Keran ${_getValveStatus()}",
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: _getValveStatusColor(),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Switch(
+                                      value: _isValveOpen(),
+                                      onChanged:
+                                          null, // Disabled since it's sensor-controlled
+                                      activeColor: Colors.green,
+                                      inactiveThumbColor: Colors.red,
+                                      inactiveTrackColor: Colors.red
+                                          .withOpacity(0.3),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                // Status indicators
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildStatusIndicator(
+                                        "Tertutup",
+                                        "${poolData!['keranTutup']} cm",
+                                        Colors.red,
+                                        _getValveStatus() == "Tertutup",
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _buildStatusIndicator(
+                                        "Normal",
+                                        "${poolData!['keranNormal']} cm",
+                                        Colors.blue,
+                                        _getValveStatus() == "Normal",
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _buildStatusIndicator(
+                                        "Terbuka",
+                                        "${poolData!['keranBuka']} cm",
+                                        Colors.green,
+                                        _getValveStatus() == "Terbuka",
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.access_time,
+                                  size: 16,
+                                  color: Colors.grey[600],
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "Terakhir update: ${DateTime.parse(latestWaterData!['createdAt']).toLocal().toString().substring(0, 19)}",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ] else ...[
                           Container(
                             padding: const EdgeInsets.all(20),
@@ -627,6 +788,54 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusIndicator(
+    String label,
+    String value,
+    Color color,
+    bool isActive,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isActive ? color.withOpacity(0.1) : Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isActive ? color : Colors.grey[300]!,
+          width: isActive ? 2 : 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            label == "Tertutup"
+                ? Icons.lock
+                : label == "Terbuka"
+                ? Icons.lock_open
+                : Icons.water_drop,
+            color: isActive ? color : Colors.grey[400],
+            size: 16,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: isActive ? color : Colors.grey[600],
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 9,
+              color: isActive ? color : Colors.grey[500],
             ),
           ),
         ],
