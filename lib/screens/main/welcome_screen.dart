@@ -16,24 +16,25 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            // Fishery Icon
+            Icon(Icons.water, size: 80, color: Colors.blue),
+
+            const SizedBox(height: 32),
+
             const Text(
-              "Selamat Datang",
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-              ),
+              "Selamat Datang di SIMONIKA",
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
             const Text(
-              "Aplikasi monitoring air yang membantu kamu memantau level air secara realtime dan lebih efisien.",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black54,
-              ),
+              "Sistem Monitoring dan Kendali Air",
+              style: TextStyle(fontSize: 16, color: Colors.black54),
+              textAlign: TextAlign.center,
             ),
 
             const SizedBox(height: 40),

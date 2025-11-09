@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'pool_screen.dart';
-import 'notif_screen.dart';
-import 'profile_screen.dart';
-import 'history_screen.dart';
+import '../pool/pool_screen.dart';
+import '../notif/notif_screen.dart';
+import '../profile/profile_screen.dart';
+import '../history/history_screen.dart';
 
 class BnavContainerScreen extends StatefulWidget {
   const BnavContainerScreen({super.key});
