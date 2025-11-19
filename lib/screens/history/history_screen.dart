@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,15 +12,34 @@ class HistoryScreen extends StatefulWidget {
   State<HistoryScreen> createState() => _HistoryScreenState();
 }
 
-class _HistoryScreenState extends State<HistoryScreen> {
+class _HistoryScreenState extends State<HistoryScreen>
+    with SingleTickerProviderStateMixin {
   List<dynamic> waterLevelData = [];
   bool isLoading = true;
   bool hasError = false;
 
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
+    );
+
     fetchWaterLevelHistory();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> fetchWaterLevelHistory() async {
@@ -44,15 +65,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
       dio.options.receiveTimeout = const Duration(seconds: 15);
 
       final response = await dio.get(
-        "http://localhost:3000/api/water/level",
+        "https://majarosoft.yogaone.me/api/water/level",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       if (response.statusCode == 200 && response.data["success"] == true) {
-        setState(() {
-          waterLevelData = response.data["data"];
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            waterLevelData = response.data["data"];
+            isLoading = false;
+          });
+          _animationController.forward();
+        }
       } else {
         setState(() {
           hasError = true;
@@ -60,37 +84,48 @@ class _HistoryScreenState extends State<HistoryScreen> {
         });
       }
     } on DioException catch (e) {
-      print("Error fetching history: $e");
-      setState(() {
-        hasError = true;
-        isLoading = false;
-      });
-
+      debugPrint("Error fetching history: $e");
       if (mounted) {
+        setState(() {
+          hasError = true;
+          isLoading = false;
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Gagal memuat data historis. Periksa koneksi internet.",
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.white),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "Gagal memuat data historis. Periksa koneksi internet.",
+                  ),
+                ),
+              ],
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
     } catch (e) {
-      print("Unexpected error: $e");
-      setState(() {
-        hasError = true;
-        isLoading = false;
-      });
+      debugPrint("Unexpected error: $e");
+      if (mounted) {
+        setState(() {
+          hasError = true;
+          isLoading = false;
+        });
+      }
     }
   }
 
   List<FlSpot> _generateChartData() {
     if (waterLevelData.isEmpty) return [];
-
-    // Take last 10 data points and reverse to show chronological order
     final recentData = waterLevelData.take(10).toList().reversed.toList();
-
     return recentData.asMap().entries.map((entry) {
       final index = entry.key;
       final data = entry.value;
@@ -100,10 +135,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   List<FlSpot> _generateDistanceChartData() {
     if (waterLevelData.isEmpty) return [];
-
-    // Take last 10 data points and reverse to show chronological order
     final recentData = waterLevelData.take(10).toList().reversed.toList();
-
     return recentData.asMap().entries.map((entry) {
       final index = entry.key;
       final data = entry.value;
@@ -112,9 +144,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Color _getWaterLevelColor(int waterLevel) {
-    if (waterLevel >= 70) return Colors.green;
-    if (waterLevel >= 30) return Colors.orange;
-    return Colors.red;
+    if (waterLevel >= 70) return Colors.green.shade600;
+    if (waterLevel >= 30) return Colors.orange.shade600;
+    return Colors.red.shade600;
   }
 
   String _formatDateTime(String dateString) {
@@ -125,418 +157,500 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text(
-          "Riwayat Level Air",
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1F2937),
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: fetchWaterLevelHistory,
-            icon: const Icon(Icons.refresh),
-            tooltip: "Refresh Data",
-          ),
-        ],
-      ),
-      body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF3B82F6)),
-            )
-          : hasError
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Gagal memuat data",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey[600],
-                    ),
+      backgroundColor: Colors.grey.shade50,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // Modern App Bar with Gradient
+          SliverAppBar(
+            expandedHeight: 100,
+            floating: false,
+            pinned: true,
+            stretch: true,
+            backgroundColor: Colors.blue.shade600,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.blue.shade600,
+                      Colors.blue.shade400,
+                      Colors.cyan.shade300,
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Periksa koneksi internet dan coba lagi",
-                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: fetchWaterLevelHistory,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text("Coba Lagi"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B82F6),
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : waterLevelData.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.water_drop_outlined,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Belum ada data historis",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Data akan muncul setelah sensor mulai bekerja",
-                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-                  ),
-                ],
-              ),
-            )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  // Chart Card
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                ),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      top: -50,
+                      right: -50,
+                      child: Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.1),
                         ),
-                      ],
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Text(
-                              "Tren Level Air",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1F2937),
-                              ),
-                            ),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF3B82F6).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                "${waterLevelData.length} data",
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF3B82F6),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          height: 200,
-                          child: LineChart(
-                            LineChartData(
-                              gridData: FlGridData(
-                                show: true,
-                                drawVerticalLine: false,
-                                horizontalInterval: 25,
-                                getDrawingHorizontalLine: (value) {
-                                  return FlLine(
-                                    color: Colors.grey[300],
-                                    strokeWidth: 1,
-                                  );
-                                },
-                              ),
-                              titlesData: FlTitlesData(
-                                show: true,
-                                bottomTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true,
-                                    reservedSize: 30,
-                                    getTitlesWidget: (value, meta) {
-                                      return Text(
-                                        "T${value.toInt() + 1}",
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 12,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                                leftTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true,
-                                    reservedSize: 40,
-                                    getTitlesWidget: (value, meta) {
-                                      return Text(
-                                        "${value.toInt()}%",
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 12,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                                topTitles: AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false),
-                                ),
-                                rightTitles: AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false),
-                                ),
-                              ),
-                              borderData: FlBorderData(
-                                show: true,
-                                border: Border.all(
-                                  color: Colors.grey[300]!,
-                                  width: 1,
-                                ),
-                              ),
-                              minX: 0,
-                              maxX: 9,
-                              minY: 0,
-                              maxY: 100,
-                              lineBarsData: [
-                                LineChartBarData(
-                                  spots: _generateChartData(),
-                                  isCurved: true,
-                                  color: const Color(0xFF3B82F6),
-                                  barWidth: 3,
-                                  isStrokeCapRound: true,
-                                  dotData: FlDotData(
-                                    show: true,
-                                    getDotPainter:
-                                        (spot, percent, barData, index) {
-                                          return FlDotCirclePainter(
-                                            radius: 4,
-                                            color: _getWaterLevelColor(
-                                              spot.y.toInt(),
-                                            ),
-                                            strokeWidth: 2,
-                                            strokeColor: Colors.white,
-                                          );
-                                        },
-                                  ),
-                                  belowBarData: BarAreaData(
-                                    show: true,
-                                    color: const Color(
-                                      0xFF3B82F6,
-                                    ).withOpacity(0.1),
-                                  ),
-                                ),
-                              ],
+                    Positioned(
+                      bottom: 20,
+                      left: 20,
+                      right: 20,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Riwayat Level Air',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.5,
                             ),
                           ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Monitoring historis data sensor',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  onPressed: fetchWaterLevelHistory,
+                  icon: const Icon(Icons.refresh_rounded),
+                  tooltip: "Refresh Data",
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+
+          // Content
+          if (isLoading)
+            SliverFillRemaining(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: Colors.blue.shade600),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Memuat data historis...',
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (hasError)
+            SliverFillRemaining(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.error_outline_rounded,
+                        size: 64,
+                        color: Colors.red.shade400,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      "Gagal memuat data",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Periksa koneksi internet dan coba lagi",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    ElevatedButton.icon(
+                      onPressed: fetchWaterLevelHistory,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text("Coba Lagi"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue.shade600,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
                         ),
-                        const SizedBox(height: 16),
-                        Row(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (waterLevelData.isEmpty)
+            SliverFillRemaining(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.water_drop_outlined,
+                        size: 64,
+                        color: Colors.blue.shade400,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      "Belum ada data historis",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Data akan muncul setelah sensor mulai bekerja",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            SliverToBoxAdapter(
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      // Stats Cards
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildStatCard(
+                              icon: Icons.analytics_outlined,
+                              label: "Total Data",
+                              value: "${waterLevelData.length}",
+                              color: Colors.blue.shade600,
+                              bgColor: Colors.blue.shade50,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                              icon: Icons.water_drop_rounded,
+                              label: "Level Terkini",
+                              value: "${waterLevelData.first['waterLevel']}%",
+                              color: _getWaterLevelColor(
+                                waterLevelData.first['waterLevel'],
+                              ),
+                              bgColor: _getWaterLevelColor(
+                                waterLevelData.first['waterLevel'],
+                              ).withOpacity(0.1),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Chart Card - Water Level
+                      _buildChartCard(
+                        title: "Tren Level Air",
+                        subtitle: "10 data terakhir",
+                        badge: "${waterLevelData.length} data",
+                        badgeColor: Colors.blue.shade600,
+                        chart: LineChart(
+                          LineChartData(
+                            gridData: FlGridData(
+                              show: true,
+                              drawVerticalLine: false,
+                              horizontalInterval: 25,
+                              getDrawingHorizontalLine: (value) {
+                                return FlLine(
+                                  color: Colors.grey.shade200,
+                                  strokeWidth: 1,
+                                );
+                              },
+                            ),
+                            titlesData: FlTitlesData(
+                              show: true,
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 30,
+                                  getTitlesWidget: (value, meta) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: Text(
+                                        "T${value.toInt() + 1}",
+                                        style: TextStyle(
+                                          color: Colors.grey.shade600,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              leftTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 40,
+                                  getTitlesWidget: (value, meta) {
+                                    return Text(
+                                      "${value.toInt()}%",
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              topTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              rightTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                            ),
+                            borderData: FlBorderData(
+                              show: true,
+                              border: Border.all(
+                                color: Colors.grey.shade200,
+                                width: 1,
+                              ),
+                            ),
+                            minX: 0,
+                            maxX: 9,
+                            minY: 0,
+                            maxY: 100,
+                            lineBarsData: [
+                              LineChartBarData(
+                                spots: _generateChartData(),
+                                isCurved: true,
+                                curveSmoothness: 0.3,
+                                color: Colors.blue.shade600,
+                                barWidth: 3,
+                                isStrokeCapRound: true,
+                                dotData: FlDotData(
+                                  show: true,
+                                  getDotPainter:
+                                      (spot, percent, barData, index) {
+                                        return FlDotCirclePainter(
+                                          radius: 5,
+                                          color: _getWaterLevelColor(
+                                            spot.y.toInt(),
+                                          ),
+                                          strokeWidth: 2,
+                                          strokeColor: Colors.white,
+                                        );
+                                      },
+                                ),
+                                belowBarData: BarAreaData(
+                                  show: true,
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.blue.shade400.withOpacity(0.3),
+                                      Colors.blue.shade200.withOpacity(0.1),
+                                    ],
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        legend: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _buildLegendItem("Tinggi", Colors.green),
-                            _buildLegendItem("Sedang", Colors.orange),
-                            _buildLegendItem("Rendah", Colors.red),
+                            _buildLegendItem("Tinggi", Colors.green.shade600),
+                            _buildLegendItem("Sedang", Colors.orange.shade600),
+                            _buildLegendItem("Rendah", Colors.red.shade600),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
 
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 20),
 
-                  // Distance Chart Card
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Text(
-                              "Tren Jarak Sensor",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1F2937),
-                              ),
+                      // Chart Card - Distance
+                      _buildChartCard(
+                        title: "Tren Jarak Sensor",
+                        subtitle: "10 data terakhir",
+                        badge: "cm",
+                        badgeColor: Colors.orange.shade600,
+                        chart: LineChart(
+                          LineChartData(
+                            gridData: FlGridData(
+                              show: true,
+                              drawVerticalLine: false,
+                              horizontalInterval: 25,
+                              getDrawingHorizontalLine: (value) {
+                                return FlLine(
+                                  color: Colors.grey.shade200,
+                                  strokeWidth: 1,
+                                );
+                              },
                             ),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                "cm",
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.orange,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          height: 200,
-                          child: LineChart(
-                            LineChartData(
-                              gridData: FlGridData(
-                                show: true,
-                                drawVerticalLine: false,
-                                horizontalInterval: 25,
-                                getDrawingHorizontalLine: (value) {
-                                  return FlLine(
-                                    color: Colors.grey[300],
-                                    strokeWidth: 1,
-                                  );
-                                },
-                              ),
-                              titlesData: FlTitlesData(
-                                show: true,
-                                bottomTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true,
-                                    reservedSize: 30,
-                                    getTitlesWidget: (value, meta) {
-                                      return Text(
+                            titlesData: FlTitlesData(
+                              show: true,
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 30,
+                                  getTitlesWidget: (value, meta) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: Text(
                                         "T${value.toInt() + 1}",
                                         style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
                                         ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                                leftTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true,
-                                    reservedSize: 50,
-                                    getTitlesWidget: (value, meta) {
-                                      return Text(
-                                        "${value.toInt()} cm",
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 12,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                                topTitles: AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false),
-                                ),
-                                rightTitles: AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
-                              borderData: FlBorderData(
-                                show: true,
-                                border: Border.all(
-                                  color: Colors.grey[300]!,
-                                  width: 1,
+                              leftTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 45,
+                                  getTitlesWidget: (value, meta) {
+                                    return Text(
+                                      "${value.toInt()}",
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
-                              minX: 0,
-                              maxX: 9,
-                              minY: 0,
-                              maxY: 100,
-                              lineBarsData: [
-                                LineChartBarData(
-                                  spots: _generateDistanceChartData(),
-                                  isCurved: true,
-                                  color: Colors.orange,
-                                  barWidth: 3,
-                                  isStrokeCapRound: true,
-                                  dotData: FlDotData(
-                                    show: true,
-                                    getDotPainter:
-                                        (spot, percent, barData, index) {
-                                          return FlDotCirclePainter(
-                                            radius: 4,
-                                            color: Colors.orange,
-                                            strokeWidth: 2,
-                                            strokeColor: Colors.white,
-                                          );
-                                        },
-                                  ),
-                                  belowBarData: BarAreaData(
-                                    show: true,
-                                    color: Colors.orange.withOpacity(0.1),
-                                  ),
-                                ),
-                              ],
+                              topTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              rightTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
                             ),
+                            borderData: FlBorderData(
+                              show: true,
+                              border: Border.all(
+                                color: Colors.grey.shade200,
+                                width: 1,
+                              ),
+                            ),
+                            minX: 0,
+                            maxX: 9,
+                            minY: 0,
+                            maxY: 100,
+                            lineBarsData: [
+                              LineChartBarData(
+                                spots: _generateDistanceChartData(),
+                                isCurved: true,
+                                curveSmoothness: 0.3,
+                                color: Colors.orange.shade600,
+                                barWidth: 3,
+                                isStrokeCapRound: true,
+                                dotData: FlDotData(
+                                  show: true,
+                                  getDotPainter:
+                                      (spot, percent, barData, index) {
+                                        return FlDotCirclePainter(
+                                          radius: 5,
+                                          color: Colors.orange.shade600,
+                                          strokeWidth: 2,
+                                          strokeColor: Colors.white,
+                                        );
+                                      },
+                                ),
+                                belowBarData: BarAreaData(
+                                  show: true,
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.orange.shade400.withOpacity(0.3),
+                                      Colors.orange.shade200.withOpacity(0.1),
+                                    ],
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
+                        infoBox: Container(
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.orange.shade200,
+                              width: 1,
+                            ),
                           ),
                           child: Row(
                             children: [
                               Icon(
-                                Icons.info_outline,
-                                size: 16,
-                                color: Colors.orange[700],
+                                Icons.info_outline_rounded,
+                                size: 18,
+                                color: Colors.orange.shade700,
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
-                                  "Jarak yang lebih kecil menunjukkan level air yang lebih tinggi",
+                                  "Jarak lebih kecil = level air lebih tinggi",
                                   style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.orange[700],
+                                    fontSize: 13,
+                                    color: Colors.orange.shade800,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -544,144 +658,220 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
 
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 20),
 
-                  // Data List
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                      // Data List Card
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.grey.shade100),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Data Terbaru",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1F2937),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: waterLevelData.length > 5
-                              ? 5
-                              : waterLevelData.length,
-                          separatorBuilder: (context, index) => const Divider(),
-                          itemBuilder: (context, index) {
-                            final data = waterLevelData[index];
-                            return ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: _getWaterLevelColor(
-                                    data['waterLevel'],
-                                  ).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    "${data['waterLevel']}%",
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: _getWaterLevelColor(
-                                        data['waterLevel'],
-                                      ),
-                                    ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.purple.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    Icons.history_rounded,
+                                    color: Colors.purple.shade600,
+                                    size: 22,
                                   ),
                                 ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  "Data Terbaru",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey.shade800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: waterLevelData.length > 5
+                                  ? 5
+                                  : waterLevelData.length,
+                              separatorBuilder: (context, index) => Divider(
+                                height: 24,
+                                color: Colors.grey.shade100,
                               ),
-                              title: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      "Level Air: ${data['waterLevel']}%",
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFF3B82F6,
-                                      ).withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      "Jarak: ${data['distance']} cm",
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Color(0xFF3B82F6),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              subtitle: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      _formatDateTime(data['createdAt']),
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[100],
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      data['serial'],
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.grey[600],
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
+                              itemBuilder: (context, index) {
+                                final data = waterLevelData[index];
+                                return _buildDataItem(data);
+                              },
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+
+                      const SizedBox(height: 20),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+    required Color bgColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              color: Colors.grey.shade800,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChartCard({
+    required String title,
+    required String subtitle,
+    required String badge,
+    required Color badgeColor,
+    required LineChart chart,
+    Widget? legend,
+    Widget? infoBox,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: badgeColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: badgeColor.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  badge,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: badgeColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          SizedBox(height: 200, child: chart),
+          if (legend != null) ...[const SizedBox(height: 16), legend],
+          if (infoBox != null) ...[const SizedBox(height: 16), infoBox],
+        ],
+      ),
     );
   }
 
@@ -692,18 +882,133 @@ class _HistoryScreenState extends State<HistoryScreen> {
         Container(
           width: 12,
           height: 12,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.3),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
         ),
         const SizedBox(width: 6),
         Text(
           label,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
+            color: Colors.grey.shade700,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildDataItem(dynamic data) {
+    final waterLevel = data['waterLevel'];
+    final levelColor = _getWaterLevelColor(waterLevel);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: levelColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Text(
+                "$waterLevel%",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: levelColor,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      "Level Air",
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        "${data['distance']} cm",
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.blue.shade700,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Text(
+                      _formatDateTime(data['createdAt']),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        data['serial'],
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

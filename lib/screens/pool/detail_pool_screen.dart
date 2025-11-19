@@ -1,5 +1,9 @@
+// ignore_for_file: unused_import
+
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fl_chart/fl_chart.dart';
 
@@ -18,16 +22,87 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
   String? poolId;
   bool isFetched = false; // supaya fetch hanya sekali
 
+  // Timer untuk polling realtime
+  Timer? _pollingTimer;
+
+  // kontrol keran otomatis: true = terbuka (ON), false = tertutup (OFF)
+  bool valveToggleState = false;
+
+  // kontrol pembuangan otomatis: true = terbuka (ON), false = tertutup (OFF)
+  bool dischargeToggleState = false;
+  // defaults jika poolData tidak menyediakan ambang
+  static const int _defaultDischargeOpenThreshold = 80;
+  static const int _defaultDischargeCloseThreshold = 20;
+
+  // Tentukan status pembuangan berdasarkan level air dan ambang dari poolData (jika ada)
+  String _getDischargeStatusFromLevel(int waterLevel) {
+    final openThreshold = (poolData?['pembuanganBatasBuka'] is num)
+        ? (poolData!['pembuanganBatasBuka'] as num).toInt()
+        : _defaultDischargeOpenThreshold;
+    final closeThreshold = (poolData?['pembuanganBatasTutup'] is num)
+        ? (poolData!['pembuanganBatasTutup'] as num).toInt()
+        : _defaultDischargeCloseThreshold;
+
+    if (waterLevel > openThreshold) return "Aktif";
+    if (waterLevel <= closeThreshold) return "Tertutup";
+    return "Normal";
+  }
+
+  Color _getDischargeStatusColor(int waterLevel) {
+    final status = _getDischargeStatusFromLevel(waterLevel);
+    switch (status) {
+      case "Aktif":
+        return Colors.green;
+      case "Tertutup":
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
     if (!isFetched) {
-      poolId = ModalRoute.of(context)!.settings.arguments as String;
-      fetchPoolDetail();
-      fetchLatestWaterLevel();
-      isFetched = true;
+      final arguments = ModalRoute.of(context)?.settings.arguments;
+      if (arguments != null && arguments is String && arguments.isNotEmpty) {
+        poolId = arguments;
+        fetchPoolDetail();
+        // Panggil awal (tampilkan error pada panggilan awal jika ada)
+        fetchLatestWaterLevel();
+        // Mulai polling periodik setiap 5 detik, supress SnackBar untuk polling agar tidak spam
+        _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+          if (mounted) {
+            fetchLatestWaterLevel(suppressSnackBar: true);
+          }
+        });
+        isFetched = true;
+      } else {
+        // Handle case when no arguments are passed - use post frame callback
+        setState(() {
+          isLoading = false;
+          isLoadingWater = false;
+        });
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("ID wadah tidak ditemukan"),
+                backgroundColor: Colors.red,
+              ),
+            );
+            Navigator.pop(context);
+          }
+        });
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> fetchPoolDetail() async {
@@ -36,7 +111,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
       String? token = prefs.getString("token");
 
       var response = await Dio().get(
-        "http://localhost:3000/api/pool/$poolId",
+        "https://majarosoft.yogaone.me/api/pool/$poolId",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -52,26 +127,42 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
     }
   }
 
-  Future<void> fetchLatestWaterLevel() async {
+  // suppressSnackBar: jika true, jangan tampilkan SnackBar saat terjadi error (digunakan untuk polling)
+  Future<void> fetchLatestWaterLevel({bool suppressSnackBar = false}) async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString("token");
+
+      if (token == null) return;
 
       final dio = Dio();
       dio.options.connectTimeout = const Duration(seconds: 10);
       dio.options.receiveTimeout = const Duration(seconds: 10);
 
       var response = await dio.get(
-        "http://localhost:3000/api/water/level",
+        "https://majarosoft.yogaone.me/api/water/level",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       if (response.statusCode == 200 && response.data["success"] == true) {
         List<dynamic> waterLevels = response.data["data"];
         if (waterLevels.isNotEmpty) {
+          // update latest data dan set valveToggleState secara otomatis:
+          // - jika level air TERdeteksi "Rendah" => buka keran (true)
+          // - jika level air Normal/Sedang/Tinggi => tutup keran (false)
+          final item = waterLevels[0];
+          final rawLevel = item['waterLevel'] ?? 0;
+          final int wl = (rawLevel is int)
+              ? rawLevel
+              : (rawLevel is double)
+              ? rawLevel.toInt()
+              : int.tryParse(rawLevel.toString()) ?? 0;
           setState(() {
-            latestWaterData = waterLevels[0]; // Get the first (latest) data
+            latestWaterData = item;
             isLoadingWater = false;
+            valveToggleState = _getWaterLevelStatus(wl) == "Rendah";
+            // set discharge otomatis berdasarkan ambang (gunakan fungsi pembantu)
+            dischargeToggleState = _getDischargeStatusFromLevel(wl) == "Aktif";
           });
         } else {
           setState(() => isLoadingWater = false);
@@ -79,19 +170,24 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
       }
     } on DioException catch (e) {
       print("DioException fetch water level: ${e.message}");
-      if (e.type == DioExceptionType.connectionError ||
-          e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.receiveTimeout) {
-        // Network connection error
+      if (!suppressSnackBar &&
+          (e.type == DioExceptionType.connectionError ||
+              e.type == DioExceptionType.connectionTimeout ||
+              e.type == DioExceptionType.receiveTimeout)) {
+        // Network connection error - use post frame callback
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                "Tidak dapat terhubung ke server. Periksa koneksi internet Anda.",
-              ),
-              backgroundColor: Colors.orange,
-            ),
-          );
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    "Tidak dapat terhubung ke server. Periksa koneksi internet Anda.",
+                  ),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            }
+          });
         }
       }
       setState(() => isLoadingWater = false);
@@ -105,6 +201,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
     setState(() {
       isLoadingWater = true;
     });
+    // saat manual refresh, tampilkan error jika ada => suppressSnackBar = false
     await fetchLatestWaterLevel();
   }
 
@@ -123,10 +220,10 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
   String _getValveStatus() {
     if (latestWaterData == null || poolData == null) return "Normal";
 
-    final distance = latestWaterData!['distance'].toDouble();
-    final keranTutup = poolData!['keranTutup'].toDouble();
-    final keranNormal = poolData!['keranNormal'].toDouble();
-    final keranBuka = poolData!['keranBuka'].toDouble();
+    final distance = (latestWaterData!['distance'] ?? 0).toDouble();
+    final keranTutup = (poolData!['keranTutup'] ?? 0).toDouble();
+    final keranNormal = (poolData!['keranNormal'] ?? 0).toDouble();
+    final keranBuka = (poolData!['keranBuka'] ?? 0).toDouble();
 
     // Check with tolerance of ±2 cm
     if ((distance - keranTutup).abs() <= 2) return "Tertutup";
@@ -167,6 +264,42 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
         centerTitle: true,
         iconTheme: const IconThemeData(color: Color(0xFF1F2937)),
         actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: poolData?['isActive'] == true
+                  ? Colors.green.withOpacity(0.1)
+                  : Colors.grey.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: poolData?['isActive'] == true
+                        ? Colors.green
+                        : Colors.grey,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  poolData?['isActive'] == true ? "AKTIF" : "NONAKTIF",
+                  style: TextStyle(
+                    color: poolData?['isActive'] == true
+                        ? Colors.green
+                        : Colors.grey,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
           IconButton(
             onPressed: refreshData,
             icon: const Icon(Icons.refresh),
@@ -184,7 +317,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  // Pool Information Card
+                  // Pool Information Header
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -200,7 +333,6 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
                       ],
                     ),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
@@ -211,29 +343,28 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Icon(
-                                Icons.water,
+                                Icons.water_drop,
                                 color: Color(0xFF3B82F6),
-                                size: 28,
+                                size: 24,
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    poolData!['namaWadah'],
+                                    poolData?['namaWadah'] ?? 'Nama Wadah',
                                     style: const TextStyle(
-                                      fontSize: 24,
+                                      fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                       color: Color(0xFF1F2937),
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
                                   Text(
-                                    "Serial: ${poolData!['serial']}",
+                                    "Serial: ${poolData?['serial'] ?? 'N/A'}",
                                     style: TextStyle(
-                                      fontSize: 14,
+                                      fontSize: 12,
                                       color: Colors.grey[600],
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -241,45 +372,23 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
                                 ],
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: poolData!['isActive']
-                                    ? Colors.green.withOpacity(0.1)
-                                    : Colors.red.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                poolData!['isActive'] ? "Aktif" : "Tidak Aktif",
-                                style: TextStyle(
-                                  color: poolData!['isActive']
-                                      ? Colors.green
-                                      : Colors.red,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
                           ],
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
                         Row(
                           children: [
                             Expanded(
-                              child: _buildInfoItem(
+                              child: _buildInfoCard(
                                 "Kedalaman",
-                                "${poolData!['kedalaman']} cm",
+                                "${poolData?['kedalaman'] ?? 0} cm",
                                 Icons.straighten,
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: _buildInfoItem(
+                              child: _buildInfoCard(
                                 "Keran Tutup",
-                                "${poolData!['keranTutup']} cm",
+                                "${poolData?['keranTutup'] ?? 0} cm",
                                 Icons.lock,
                               ),
                             ),
@@ -289,17 +398,17 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
                         Row(
                           children: [
                             Expanded(
-                              child: _buildInfoItem(
+                              child: _buildInfoCard(
                                 "Keran Normal",
-                                "${poolData!['keranNormal']} cm",
+                                "${poolData?['keranNormal'] ?? 0} cm",
                                 Icons.water_drop,
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: _buildInfoItem(
+                              child: _buildInfoCard(
                                 "Keran Buka",
-                                "${poolData!['keranBuka']} cm",
+                                "${poolData?['keranBuka'] ?? 0} cm",
                                 Icons.lock_open,
                               ),
                             ),
@@ -311,7 +420,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Water Level Card
+                  // Level Air Terkini with ON badge
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -334,9 +443,42 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
                             const Text(
                               "Level Air Terkini",
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF1F2937),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.green,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Text(
+                                    "ON",
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             const Spacer(),
@@ -351,166 +493,141 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
                               ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
                         if (latestWaterData != null) ...[
-                          // Pie Chart Section
-                          Container(
-                            height: 200,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[50],
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  flex: 2,
-                                  child: PieChart(
-                                    PieChartData(
-                                      sections: [
-                                        PieChartSectionData(
-                                          value: latestWaterData!['waterLevel']
-                                              .toDouble(),
+                          // Circular Gauge
+                          Center(
+                            child: Container(
+                              width: 180,
+                              height: 180,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  // Background circle
+                                  SizedBox(
+                                    width: 180,
+                                    height: 180,
+                                    child: CircularProgressIndicator(
+                                      value: 1.0,
+                                      strokeWidth: 12,
+                                      backgroundColor: Colors.grey[200],
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.grey[200]!,
+                                      ),
+                                    ),
+                                  ),
+                                  // Progress circle
+                                  SizedBox(
+                                    width: 180,
+                                    height: 180,
+                                    child: CircularProgressIndicator(
+                                      value:
+                                          (latestWaterData?['waterLevel'] ??
+                                              0) /
+                                          100,
+                                      strokeWidth: 12,
+                                      backgroundColor: Colors.transparent,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        _getWaterLevelColor(
+                                          latestWaterData?['waterLevel'] ?? 0,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  // Center content
+                                  Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        '${latestWaterData?['waterLevel'] ?? 0}%',
+
+                                        style: TextStyle(
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.bold,
                                           color: _getWaterLevelColor(
-                                            latestWaterData!['waterLevel'],
+                                            latestWaterData?['waterLevel'] ?? 0,
                                           ),
-                                          title:
-                                              '${latestWaterData!['waterLevel']}%',
-                                          titleStyle: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                          radius: 60,
                                         ),
-                                        PieChartSectionData(
-                                          value:
-                                              (100 - latestWaterData!['waterLevel'])
-                                                  .toDouble(),
-                                          color: Colors.grey[300],
-                                          title: '',
-                                          radius: 50,
+                                      ),
+                                      Text(
+                                        'Level Air',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                          fontWeight: FontWeight.w500,
                                         ),
-                                      ],
-                                      sectionsSpace: 2,
-                                      centerSpaceRadius: 40,
-                                      startDegreeOffset: -90,
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                Expanded(
-                                  flex: 3,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(left: 20),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Container(
-                                              width: 12,
-                                              height: 12,
-                                              decoration: BoxDecoration(
-                                                color: _getWaterLevelColor(
-                                                  latestWaterData!['waterLevel'],
-                                                ),
-                                                shape: BoxShape.circle,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              "Air: ${latestWaterData!['waterLevel']}%",
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                                color: Color(0xFF1F2937),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Row(
-                                          children: [
-                                            Container(
-                                              width: 12,
-                                              height: 12,
-                                              decoration: BoxDecoration(
-                                                color: Colors.grey[300],
-                                                shape: BoxShape.circle,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              "Kosong: ${100 - latestWaterData!['waterLevel']}%",
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500,
-                                                color: Colors.grey[600],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 6,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: _getWaterLevelColor(
-                                              latestWaterData!['waterLevel'],
-                                            ).withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(
-                                              20,
-                                            ),
-                                            border: Border.all(
-                                              color: _getWaterLevelColor(
-                                                latestWaterData!['waterLevel'],
-                                              ).withOpacity(0.3),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            _getWaterLevelStatus(
-                                              latestWaterData!['waterLevel'],
-                                            ),
-                                            style: TextStyle(
-                                              color: _getWaterLevelColor(
-                                                latestWaterData!['waterLevel'],
-                                              ),
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                           const SizedBox(height: 16),
+
+                          // Status badge
+                          Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getWaterLevelColor(
+                                  latestWaterData?['waterLevel'] ?? 0,
+                                ).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: _getWaterLevelColor(
+                                    latestWaterData?['waterLevel'] ?? 0,
+                                  ).withOpacity(0.3),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.water_drop,
+                                    size: 16,
+                                    color: _getWaterLevelColor(
+                                      latestWaterData?['waterLevel'] ?? 0,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _getWaterLevelStatus(
+                                      latestWaterData?['waterLevel'] ?? 0,
+                                    ),
+                                    style: TextStyle(
+                                      color: _getWaterLevelColor(
+                                        latestWaterData?['waterLevel'] ?? 0,
+                                      ),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Distance and Depth info
                           Row(
                             children: [
                               Expanded(
                                 child: Container(
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: Colors.grey[50],
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: Colors.grey[200]!,
-                                    ),
                                   ),
                                   child: Column(
                                     children: [
                                       Text(
-                                        "${latestWaterData!['distance']} cm",
+                                        "${latestWaterData?['distance'] ?? 0} cm",
                                         style: const TextStyle(
-                                          fontSize: 24,
+                                          fontSize: 20,
                                           fontWeight: FontWeight.bold,
                                           color: Color(0xFF1F2937),
                                         ),
@@ -518,7 +635,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
                                       Text(
                                         "Jarak Sensor",
                                         style: TextStyle(
-                                          fontSize: 14,
+                                          fontSize: 12,
                                           color: Colors.grey[600],
                                           fontWeight: FontWeight.w500,
                                         ),
@@ -532,26 +649,23 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
                                 child: Container(
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: Colors.grey[50],
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: Colors.grey[200]!,
-                                    ),
                                   ),
                                   child: Column(
                                     children: [
                                       Text(
-                                        "${poolData!['kedalaman']} cm",
+                                        "${poolData?['kedalaman'] ?? 0} cm",
                                         style: const TextStyle(
-                                          fontSize: 24,
+                                          fontSize: 20,
                                           fontWeight: FontWeight.bold,
                                           color: Color(0xFF1F2937),
                                         ),
                                       ),
                                       Text(
-                                        "Kedalaman Maksimal",
+                                        "Kedalaman Maks",
                                         style: TextStyle(
-                                          fontSize: 14,
+                                          fontSize: 12,
                                           color: Colors.grey[600],
                                           fontWeight: FontWeight.w500,
                                         ),
@@ -561,137 +675,6 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
                                 ),
                               ),
                             ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Valve Status and Toggle Section
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: _getValveStatusColor().withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: _getValveStatusColor().withOpacity(0.2),
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: _getValveStatusColor()
-                                            .withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        _getValveStatus() == "Tertutup"
-                                            ? Icons.lock
-                                            : _getValveStatus() == "Terbuka"
-                                            ? Icons.lock_open
-                                            : Icons.water_drop,
-                                        color: _getValveStatusColor(),
-                                        size: 20,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            "Status Keran",
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey[600],
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                          Text(
-                                            "Keran ${_getValveStatus()}",
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: _getValveStatusColor(),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Switch(
-                                      value: _isValveOpen(),
-                                      onChanged:
-                                          null, // Disabled since it's sensor-controlled
-                                      activeColor: Colors.green,
-                                      inactiveThumbColor: Colors.red,
-                                      inactiveTrackColor: Colors.red
-                                          .withOpacity(0.3),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                // Status indicators
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _buildStatusIndicator(
-                                        "Tertutup",
-                                        "${poolData!['keranTutup']} cm",
-                                        Colors.red,
-                                        _getValveStatus() == "Tertutup",
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: _buildStatusIndicator(
-                                        "Normal",
-                                        "${poolData!['keranNormal']} cm",
-                                        Colors.blue,
-                                        _getValveStatus() == "Normal",
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: _buildStatusIndicator(
-                                        "Terbuka",
-                                        "${poolData!['keranBuka']} cm",
-                                        Colors.green,
-                                        _getValveStatus() == "Terbuka",
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[50],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.access_time,
-                                  size: 16,
-                                  color: Colors.grey[600],
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  "Terakhir update: ${DateTime.parse(latestWaterData!['createdAt']).toLocal().toString().substring(0, 19)}",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
                           ),
                         ] else ...[
                           Container(
@@ -716,32 +699,6 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    "Pastikan perangkat terhubung dan server aktif",
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[500],
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  ElevatedButton.icon(
-                                    onPressed: refreshData,
-                                    icon: const Icon(Icons.refresh, size: 16),
-                                    label: const Text("Coba Lagi"),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF3B82F6),
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 8,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                    ),
-                                  ),
                                 ],
                               ),
                             ),
@@ -750,22 +707,336 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
                       ],
                     ),
                   ),
+
+                  const SizedBox(height: 16),
+
+                  // Status Keran Section
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.water_drop,
+                              color: _getValveStatusColor(),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              "Status Keran",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                "Keran ${_getValveStatus()}",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: _getValveStatusColor(),
+                                ),
+                              ),
+                            ),
+                            // Switch status keran (otomatis) - non-interaktif, mengikuti logika level air
+                            Switch(
+                              value: valveToggleState,
+                              onChanged: null,
+                              activeColor: Colors.blue,
+                              activeTrackColor: Colors.blue.withOpacity(0.3),
+                              inactiveThumbColor: Colors.grey,
+                              inactiveTrackColor: Colors.grey.withOpacity(0.3),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildStatusIndicator(
+                                "Tertutup",
+                                "${poolData?['keranTutup'] ?? 0} cm",
+                                Colors.red,
+                                _getValveStatus() == "Tertutup",
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildStatusIndicator(
+                                "Normal",
+                                "${poolData?['keranNormal'] ?? 0} cm",
+                                Colors.blue,
+                                _getValveStatus() == "Normal",
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildStatusIndicator(
+                                "Terbuka",
+                                "${poolData?['keranBuka'] ?? 0} cm",
+                                Colors.green,
+                                _getValveStatus() == "Terbuka",
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Status Pembuangan Section
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.water_damage,
+                              color: latestWaterData != null
+                                  ? _getDischargeStatusColor(
+                                      (latestWaterData?['waterLevel'] ?? 0)
+                                              is num
+                                          ? (latestWaterData?['waterLevel']
+                                                    as num)
+                                                .toInt()
+                                          : int.tryParse(
+                                                  latestWaterData?['waterLevel']
+                                                          ?.toString() ??
+                                                      '0',
+                                                ) ??
+                                                0,
+                                    )
+                                  : Colors.red,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              "Status Pembuangan",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                // tampilkan status dinamis berdasarkan latestWaterData jika tersedia
+                                latestWaterData != null
+                                    ? "Pembuangan ${_getDischargeStatusFromLevel((latestWaterData?['waterLevel'] ?? 0) is num ? (latestWaterData?['waterLevel'] as num).toInt() : int.tryParse(latestWaterData?['waterLevel']?.toString() ?? '0') ?? 0)}"
+                                    : "Pembuangan Tertutup",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: latestWaterData != null
+                                      ? _getDischargeStatusColor(
+                                          (latestWaterData?['waterLevel'] ?? 0)
+                                                  is num
+                                              ? (latestWaterData?['waterLevel']
+                                                        as num)
+                                                    .toInt()
+                                              : int.tryParse(
+                                                      latestWaterData?['waterLevel']
+                                                              ?.toString() ??
+                                                          '0',
+                                                    ) ??
+                                                    0,
+                                        )
+                                      : Colors.red,
+                                ),
+                              ),
+                            ),
+                            // Switch pembuangan otomatis (non-interaktif)
+                            Switch(
+                              value: dischargeToggleState,
+                              onChanged: null,
+                              activeColor: Colors.red.shade700,
+                              activeTrackColor: Colors.red.withOpacity(0.2),
+                              inactiveThumbColor: Colors.grey,
+                              inactiveTrackColor: Colors.grey.withOpacity(0.3),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildDischargeIndicator(
+                                "Tertutup",
+                                "< ${poolData?['pembuanganBatasTutup'] ?? _defaultDischargeCloseThreshold}%",
+                                Colors.red,
+                                // aktif jika status == Tertutup
+                                latestWaterData != null
+                                    ? _getDischargeStatusFromLevel(
+                                            (latestWaterData?['waterLevel'] ??
+                                                        0)
+                                                    is num
+                                                ? (latestWaterData?['waterLevel']
+                                                          as num)
+                                                      .toInt()
+                                                : int.tryParse(
+                                                        latestWaterData?['waterLevel']
+                                                                ?.toString() ??
+                                                            '0',
+                                                      ) ??
+                                                      0,
+                                          ) ==
+                                          "Tertutup"
+                                    : false,
+                                Icons.block,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildDischargeIndicator(
+                                "Normal",
+                                "${(poolData?['pembuanganBatasTutup'] ?? _defaultDischargeCloseThreshold)}-${(poolData?['pembuanganBatasBuka'] ?? _defaultDischargeOpenThreshold)}%",
+                                Colors.grey,
+                                latestWaterData != null
+                                    ? _getDischargeStatusFromLevel(
+                                            (latestWaterData?['waterLevel'] ??
+                                                        0)
+                                                    is num
+                                                ? (latestWaterData?['waterLevel']
+                                                          as num)
+                                                      .toInt()
+                                                : int.tryParse(
+                                                        latestWaterData?['waterLevel']
+                                                                ?.toString() ??
+                                                            '0',
+                                                      ) ??
+                                                      0,
+                                          ) ==
+                                          "Normal"
+                                    : false,
+                                Icons.opacity,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildDischargeIndicator(
+                                "Aktif",
+                                "> ${poolData?['pembuanganBatasBuka'] ?? _defaultDischargeOpenThreshold}%",
+                                Colors.green,
+                                latestWaterData != null
+                                    ? _getDischargeStatusFromLevel(
+                                            (latestWaterData?['waterLevel'] ??
+                                                        0)
+                                                    is num
+                                                ? (latestWaterData?['waterLevel']
+                                                          as num)
+                                                      .toInt()
+                                                : int.tryParse(
+                                                        latestWaterData?['waterLevel']
+                                                                ?.toString() ??
+                                                            '0',
+                                                      ) ??
+                                                      0,
+                                          ) ==
+                                          "Aktif"
+                                    : false,
+                                Icons.water_damage,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Last update info
+                  if (latestWaterData != null)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.access_time,
+                            size: 16,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Terakhir update: ${latestWaterData != null ? DateTime.parse(latestWaterData!['createdAt'] ?? DateTime.now().toIso8601String()).toLocal().toString().substring(0, 19) : 'N/A'}",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            "5 detik yang lalu",
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
     );
   }
 
-  Widget _buildInfoItem(String label, String value, IconData icon) {
+  Widget _buildInfoCard(String label, String value, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: Colors.grey[700]),
+          Icon(icon, size: 16, color: Colors.grey[700]),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -774,7 +1045,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 10,
                     color: Colors.grey[600],
                     fontWeight: FontWeight.w500,
                   ),
@@ -788,6 +1059,47 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDischargeIndicator(
+    String label,
+    String value,
+    Color color,
+    bool isActive,
+    IconData icon,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isActive ? color.withOpacity(0.1) : Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isActive ? color : Colors.grey[300]!,
+          width: isActive ? 2 : 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: isActive ? color : Colors.grey[400], size: 16),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: isActive ? color : Colors.grey[600],
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 9,
+              color: isActive ? color : Colors.grey[500],
             ),
           ),
         ],

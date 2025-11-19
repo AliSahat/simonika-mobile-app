@@ -28,9 +28,12 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (poolId == null) {
-      poolId = ModalRoute.of(context)?.settings.arguments as String?;
-      if (poolId != null) {
+      final arguments = ModalRoute.of(context)?.settings.arguments;
+      if (arguments != null && arguments is String && arguments.isNotEmpty) {
+        poolId = arguments;
         fetchPoolData();
+      } else {
+        setState(() => isLoadingData = false);
       }
     }
   }
@@ -41,7 +44,7 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
       String? token = prefs.getString("token");
 
       final response = await Dio().get(
-        "http://localhost:3000/api/pool/$poolId",
+        "https://majarosoft.yogaone.me/api/pool/$poolId",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -49,10 +52,10 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
 
       serialController.text = poolData['serial'] ?? '';
       namaWadahController.text = poolData['namaWadah'] ?? '';
-      kedalamanController.text = poolData['kedalaman'].toString();
-      keranTutupController.text = poolData['keranTutup'].toString();
-      keranNormalController.text = poolData['keranNormal'].toString();
-      keranBukaController.text = poolData['keranBuka'].toString();
+      kedalamanController.text = (poolData['kedalaman'] ?? 0).toString();
+      keranTutupController.text = (poolData['keranTutup'] ?? 0).toString();
+      keranNormalController.text = (poolData['keranNormal'] ?? 0).toString();
+      keranBukaController.text = (poolData['keranBuka'] ?? 0).toString();
       isActive = poolData['isActive'] ?? false;
 
       setState(() => isLoadingData = false);
@@ -72,7 +75,7 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
       String? token = prefs.getString("token");
 
       final response = await Dio().put(
-        "http://localhost:3000/api/pool/$poolId",
+        "https://majarosoft.yogaone.me/api/pool/$poolId",
         data: {
           "serial": serialController.text.trim(),
           "namaWadah": namaWadahController.text.trim(),

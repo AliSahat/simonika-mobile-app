@@ -31,7 +31,7 @@ class _CreatePoolScreenState extends State<CreatePoolScreen> {
       String? token = prefs.getString("token");
 
       final response = await Dio().post(
-        "http://localhost:3000/api/pool",
+        "https://majarosoft.yogaone.me/api/pool",
         data: {
           "serial": serialController.text.trim(),
           "namaWadah": namaWadahController.text.trim(),
