@@ -52,7 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       }
 
       final response = await Dio().get(
-        "https://majarosoft.yogaone.me/api/auth/profile",
+        "http://localhost:3000/api/auth/profile",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -235,7 +235,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   // Content
                   SliverToBoxAdapter(
                     child: Transform.translate(
-                        offset: const Offset(0, 20),
+                      offset: const Offset(0, 20),
                       child: Column(
                         children: [
                           // Profile Card

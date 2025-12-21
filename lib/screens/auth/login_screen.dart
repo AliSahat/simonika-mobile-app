@@ -61,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen>
 
     try {
       final response = await dio.post(
-        "https://majarosoft.yogaone.me/api/auth/login",
+        "http://localhost:3000/api/auth/login",
         data: {
           "username": _usernameController.text.trim(),
           "password": _passwordController.text.trim(),

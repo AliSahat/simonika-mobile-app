@@ -1,4 +1,4 @@
-// ignore_for_file: unused_import
+// ignore_for_file: unused_import, deprecated_member_use
 
 import 'dart:async';
 import 'package:dio/dio.dart';
@@ -111,7 +111,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
       String? token = prefs.getString("token");
 
       var response = await Dio().get(
-        "https://majarosoft.yogaone.me/api/pool/$poolId",
+        "http://localhost:3000/api/pool/$poolId",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -140,7 +140,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
       dio.options.receiveTimeout = const Duration(seconds: 10);
 
       var response = await dio.get(
-        "https://majarosoft.yogaone.me/api/water/level",
+        "http://localhost:3000/api/water/level",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 

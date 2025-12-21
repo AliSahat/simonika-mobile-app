@@ -31,7 +31,7 @@ class _CreatePoolScreenState extends State<CreatePoolScreen> {
       String? token = prefs.getString("token");
 
       final response = await Dio().post(
-        "https://majarosoft.yogaone.me/api/pool",
+        "http://localhost:3000/api/pool",
         data: {
           "serial": serialController.text.trim(),
           "namaWadah": namaWadahController.text.trim(),
@@ -40,11 +40,7 @@ class _CreatePoolScreenState extends State<CreatePoolScreen> {
           "keranNormal": int.parse(keranNormalController.text.trim()),
           "keranBuka": int.parse(keranBukaController.text.trim()),
         },
-        options: Options(
-          headers: {
-            "Authorization": "Bearer $token",
-          },
-        ),
+        options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       if (response.data["success"] == true) {
@@ -115,11 +111,7 @@ class _CreatePoolScreenState extends State<CreatePoolScreen> {
               ),
               child: const Column(
                 children: [
-                  Icon(
-                    Icons.water_drop,
-                    size: 48,
-                    color: Colors.white,
-                  ),
+                  Icon(Icons.water_drop, size: 48, color: Colors.white),
                   SizedBox(height: 12),
                   Text(
                     "Buat Wadah Baru",
@@ -132,10 +124,7 @@ class _CreatePoolScreenState extends State<CreatePoolScreen> {
                   SizedBox(height: 4),
                   Text(
                     "Isi informasi wadah dengan lengkap",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white70,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.white70),
                   ),
                 ],
               ),
@@ -305,10 +294,7 @@ class _CreatePoolScreenState extends State<CreatePoolScreen> {
     return TextFormField(
       controller: controller,
       keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-      style: const TextStyle(
-        fontSize: 16,
-        color: Color(0xFF1F2937),
-      ),
+      style: const TextStyle(fontSize: 16, color: Color(0xFF1F2937)),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -317,10 +303,7 @@ class _CreatePoolScreenState extends State<CreatePoolScreen> {
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
-        hintStyle: TextStyle(
-          color: Colors.grey[400],
-          fontSize: 14,
-        ),
+        hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
         prefixIcon: Container(
           margin: const EdgeInsets.all(12),
           padding: const EdgeInsets.all(8),
@@ -328,11 +311,7 @@ class _CreatePoolScreenState extends State<CreatePoolScreen> {
             color: const Color(0xFF3B82F6).withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            icon,
-            color: const Color(0xFF3B82F6),
-            size: 20,
-          ),
+          child: Icon(icon, color: const Color(0xFF3B82F6), size: 20),
         ),
         filled: true,
         fillColor: Colors.grey[50],

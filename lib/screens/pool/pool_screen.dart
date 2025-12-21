@@ -48,7 +48,7 @@ class _PoolScreenState extends State<PoolScreen>
       if (token == null) return;
 
       final response = await Dio().get(
-        "https://majarosoft.yogaone.me/api/pool",
+        "http://localhost:3000/api/pool",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -116,7 +116,7 @@ class _PoolScreenState extends State<PoolScreen>
       if (token == null) return;
 
       await Dio().delete(
-        "https://majarosoft.yogaone.me/api/pool/$poolId",
+        "http://localhost:3000/api/pool/$poolId",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 

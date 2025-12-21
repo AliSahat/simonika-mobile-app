@@ -65,7 +65,7 @@ class _HistoryScreenState extends State<HistoryScreen>
       dio.options.receiveTimeout = const Duration(seconds: 15);
 
       final response = await dio.get(
-        "https://majarosoft.yogaone.me/api/water/level",
+        "http://localhost:3000/api/water/level",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 

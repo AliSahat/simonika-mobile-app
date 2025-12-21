@@ -62,7 +62,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     try {
       final response = await dio.post(
-        "https://majarosoft.yogaone.me/api/auth/register",
+        "http://localhost:3000/api/auth/register",
         data: {
           "name": nameController.text.trim(),
           "username": usernameController.text.trim(),

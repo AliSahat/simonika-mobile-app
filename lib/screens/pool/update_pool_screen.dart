@@ -44,7 +44,7 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
       String? token = prefs.getString("token");
 
       final response = await Dio().get(
-        "https://majarosoft.yogaone.me/api/pool/$poolId",
+        "http://localhost:3000/api/pool/$poolId",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -75,7 +75,7 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
       String? token = prefs.getString("token");
 
       final response = await Dio().put(
-        "https://majarosoft.yogaone.me/api/pool/$poolId",
+        "http://localhost:3000/api/pool/$poolId",
         data: {
           "serial": serialController.text.trim(),
           "namaWadah": namaWadahController.text.trim(),
