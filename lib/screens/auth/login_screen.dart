@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:developer' as developer;
+
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/api.dart';
@@ -59,6 +61,13 @@ class _LoginScreenState extends State<LoginScreen>
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => isLoading = true);
+    
+    developer.log(
+      'Attempting login',
+      name: 'LoginScreen',
+      error: {'username': _usernameController.text.trim()},
+    );
+
 
     try {
       final response = await dio.post(
@@ -74,6 +83,13 @@ class _LoginScreenState extends State<LoginScreen>
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString("token", token);
+      
+      developer.log(
+        'Login successful',
+        name: 'LoginScreen',
+        error: {'token': token},
+      );
+
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -96,6 +112,12 @@ class _LoginScreenState extends State<LoginScreen>
         Navigator.pushReplacementNamed(context, "/bnav");
       }
     } catch (e) {
+      developer.log(
+        'Login failed',
+        name: 'LoginScreen',
+        error: e,
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

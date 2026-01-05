@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../constants/api.dart';
@@ -61,6 +62,15 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     setState(() => isLoading = true);
 
+    developer.log(
+      'Attempting register',
+      name: 'RegisterScreen',
+      error: {
+        'username': usernameController.text.trim(),
+        'name': nameController.text.trim(),
+      },
+    );
+
     try {
       final response = await dio.post(
         "$baseUrl/api/auth/register",
@@ -73,6 +83,12 @@ class _RegisterScreenState extends State<RegisterScreen>
 
       if (mounted) {
         if (response.statusCode == 200) {
+          developer.log(
+            'Register successful',
+            name: 'RegisterScreen',
+            error: response.data,
+          );
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
@@ -100,6 +116,19 @@ class _RegisterScreenState extends State<RegisterScreen>
             }
           });
         } else {
+          developer.log(
+            'Register failed (status code)',
+            name: 'RegisterScreen',
+            error: response.data,
+          );
+
+          String errorMessage = "Registrasi gagal";
+          if (response.data is Map) {
+            errorMessage = response.data["message"] ?? errorMessage;
+          } else if (response.data is String) {
+            errorMessage = response.data;
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
@@ -107,7 +136,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                   const Icon(Icons.error_outline, color: Colors.white),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(response.data["message"] ?? "Registrasi gagal"),
+                    child: Text(errorMessage),
                   ),
                 ],
               ),
@@ -121,9 +150,20 @@ class _RegisterScreenState extends State<RegisterScreen>
         }
       }
     } on DioException catch (e) {
+      developer.log(
+        'Register failed (DioException)',
+        name: 'RegisterScreen',
+        error: e,
+      );
+
       if (mounted) {
-        final errorMessage =
-            e.response?.data["message"] ?? "Gagal daftar, terjadi error";
+        String errorMessage = "Gagal daftar, terjadi error";
+        if (e.response?.data is Map) {
+          errorMessage = e.response?.data["message"] ?? errorMessage;
+        } else if (e.response?.data is String) {
+          errorMessage = e.response?.data;
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -142,6 +182,12 @@ class _RegisterScreenState extends State<RegisterScreen>
         );
       }
     } catch (e) {
+      developer.log(
+        'Register failed (Generic)',
+        name: 'RegisterScreen',
+        error: e,
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
