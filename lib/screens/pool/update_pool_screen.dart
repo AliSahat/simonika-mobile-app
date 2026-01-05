@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../constants/api.dart';
 
 class UpdatePoolScreen extends StatefulWidget {
   const UpdatePoolScreen({super.key});
@@ -44,7 +45,7 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
       String? token = prefs.getString("token");
 
       final response = await Dio().get(
-        "http://localhost:3000/api/pool/$poolId",
+        "$baseUrl/api/pool/$poolId",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -75,7 +76,7 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
       String? token = prefs.getString("token");
 
       final response = await Dio().put(
-        "http://localhost:3000/api/pool/$poolId",
+        "$baseUrl/api/pool/$poolId",
         data: {
           "serial": serialController.text.trim(),
           "namaWadah": namaWadahController.text.trim(),

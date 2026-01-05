@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../../constants/api.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -62,7 +63,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     try {
       final response = await dio.post(
-        "http://localhost:3000/api/auth/register",
+        "$baseUrl/api/auth/register",
         data: {
           "name": nameController.text.trim(),
           "username": usernameController.text.trim(),

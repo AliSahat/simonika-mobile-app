@@ -3,6 +3,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../constants/api.dart';
 
 class PoolScreen extends StatefulWidget {
   const PoolScreen({super.key});
@@ -48,7 +49,7 @@ class _PoolScreenState extends State<PoolScreen>
       if (token == null) return;
 
       final response = await Dio().get(
-        "http://localhost:3000/api/pool",
+        "$baseUrl/api/pool",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -116,7 +117,7 @@ class _PoolScreenState extends State<PoolScreen>
       if (token == null) return;
 
       await Dio().delete(
-        "http://localhost:3000/api/pool/$poolId",
+        "$baseUrl/api/pool/$poolId",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 

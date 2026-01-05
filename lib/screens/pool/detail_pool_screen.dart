@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../constants/api.dart';
 
 class DetailPoolScreen extends StatefulWidget {
   const DetailPoolScreen({super.key});
@@ -111,7 +112,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
       String? token = prefs.getString("token");
 
       var response = await Dio().get(
-        "http://localhost:3000/api/pool/$poolId",
+        "$baseUrl/api/pool/$poolId",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -140,7 +141,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
       dio.options.receiveTimeout = const Duration(seconds: 10);
 
       var response = await dio.get(
-        "http://localhost:3000/api/water/level",
+        "$baseUrl/api/water/level",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 

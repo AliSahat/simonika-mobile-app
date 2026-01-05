@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../constants/api.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -65,7 +66,7 @@ class _HistoryScreenState extends State<HistoryScreen>
       dio.options.receiveTimeout = const Duration(seconds: 15);
 
       final response = await dio.get(
-        "http://localhost:3000/api/water/level",
+        "$baseUrl/api/water/level",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 

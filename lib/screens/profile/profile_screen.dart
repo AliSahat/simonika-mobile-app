@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../constants/api.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -52,7 +53,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       }
 
       final response = await Dio().get(
-        "http://localhost:3000/api/auth/profile",
+        "$baseUrl/api/auth/profile",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 

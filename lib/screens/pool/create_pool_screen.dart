@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../constants/api.dart';
 
 class CreatePoolScreen extends StatefulWidget {
   const CreatePoolScreen({super.key});
@@ -31,7 +32,7 @@ class _CreatePoolScreenState extends State<CreatePoolScreen> {
       String? token = prefs.getString("token");
 
       final response = await Dio().post(
-        "http://localhost:3000/api/pool",
+        "$baseUrl/api/pool",
         data: {
           "serial": serialController.text.trim(),
           "namaWadah": namaWadahController.text.trim(),

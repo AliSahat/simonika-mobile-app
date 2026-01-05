@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../constants/api.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -61,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen>
 
     try {
       final response = await dio.post(
-        "http://localhost:3000/api/auth/login",
+        "$baseUrl/api/auth/login",
         data: {
           "username": _usernameController.text.trim(),
           "password": _passwordController.text.trim(),
