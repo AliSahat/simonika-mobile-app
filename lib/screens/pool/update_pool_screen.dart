@@ -25,6 +25,13 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
   bool isActive = false;
   String? poolId;
 
+  // MQTT Config Controllers
+  final TextEditingController _jarakDasarController = TextEditingController();
+  final TextEditingController _batasBawahController = TextEditingController();
+  final TextEditingController _batasAtasController = TextEditingController();
+  bool _modeAuto = true;
+  bool isMqttLoading = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -55,9 +62,14 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
       namaWadahController.text = poolData['namaWadah'] ?? '';
       kedalamanController.text = (poolData['kedalaman'] ?? 0).toString();
       keranTutupController.text = (poolData['keranTutup'] ?? 0).toString();
+      keranTutupController.text = (poolData['keranTutup'] ?? 0).toString();
       keranNormalController.text = (poolData['keranNormal'] ?? 0).toString();
       keranBukaController.text = (poolData['keranBuka'] ?? 0).toString();
       isActive = poolData['isActive'] ?? false;
+
+      // dispose controllers on close is implicitly handled by garbage collector for basic types but manual dispose is good practice
+      // Initialize MQTT fields with default or empty, waiting for fetch if needed (but requirement says input fresh)
+      // _jarakDasarController.text ... (Left empty as requested)
 
       setState(() => isLoadingData = false);
     } catch (e) {
@@ -66,8 +78,56 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
     }
   }
 
+  Future<void> sendMqttConfig() async {
+    setState(() => isMqttLoading = true);
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString("token");
+
+      final payload = {
+        "modeAuto": _modeAuto,
+        "jarakDasar": int.tryParse(_jarakDasarController.text.trim()) ?? 0,
+        "batasBawah": int.tryParse(_batasBawahController.text.trim()) ?? 0,
+        "batasAtas": int.tryParse(_batasAtasController.text.trim()) ?? 0,
+      };
+
+      final response = await Dio().post(
+        "$baseUrl/api/mqtt/publish",
+        data: {"topic": "kolam/command", "payload": payload},
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      if (response.data["success"] == true) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Konfigurasi MQTT berhasil dikirim!"),
+            backgroundColor: Colors.green[600],
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("Error mqtt publish: $e");
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("Gagal mengirim konfigurasi"),
+          backgroundColor: Colors.red[600],
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => isMqttLoading = false);
+    }
+  }
+
   Future<void> updatePool() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Validate MQTT fields only if they are filled? Or separate validation?
+    // Since it's a separate button, we don't enforce MQTT fields for general update.
 
     setState(() => isLoading = true);
 
@@ -333,6 +393,130 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
                         activeColor: const Color(0xFF3B82F6),
                       ),
                     ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Konfigurasi Perangkat IoT",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1F2937),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.settings_suggest,
+                          color: Color(0xFF10B981),
+                          size: 20,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          "Mode Otomatis",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                      Switch(
+                        value: _modeAuto,
+                        onChanged: (value) => setState(() => _modeAuto = value),
+                        activeColor: const Color(0xFF10B981),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _jarakDasarController,
+                    label: "Jarak Dasar (cm)",
+                    icon: Icons.vertical_align_bottom,
+                    hint: "Contoh: 120",
+                    isNumber: true,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _batasBawahController,
+                    label: "Batas Bawah (cm)",
+                    icon: Icons.south,
+                    hint: "Contoh: 30",
+                    isNumber: true,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _batasAtasController,
+                    label: "Batas Atas (cm)",
+                    icon: Icons.north,
+                    hint: "Contoh: 85",
+                    isNumber: true,
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: isMqttLoading ? null : sendMqttConfig,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.all(16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: isMqttLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.send, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  "Kirim Konfigurasi",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
                   ),
                 ],
               ),

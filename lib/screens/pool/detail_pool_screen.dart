@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:logger/logger.dart';
 import '../../constants/api.dart';
 
 class DetailPoolScreen extends StatefulWidget {
@@ -25,6 +26,8 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
 
   // Timer untuk polling realtime
   Timer? _pollingTimer;
+
+  final logger = Logger();
 
   // kontrol keran otomatis: true = terbuka (ON), false = tertutup (OFF)
   bool valveToggleState = false;
@@ -108,6 +111,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
 
   Future<void> fetchPoolDetail() async {
     try {
+      logger.d("Fetching pool detail for ID: $poolId");
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString("token");
 
@@ -117,13 +121,16 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
       );
 
       if (response.statusCode == 200 && response.data["success"] == true) {
+        logger.i(
+          "Pool detail fetched successfully: ${response.data['data']['namaWadah']}",
+        );
         setState(() {
           poolData = response.data["data"];
           isLoading = false;
         });
       }
-    } catch (e) {
-      print("Error fetch detail: $e");
+    } catch (e, stackTrace) {
+      logger.e("Error fetching pool detail", error: e, stackTrace: stackTrace);
       setState(() => isLoading = false);
     }
   }
@@ -134,7 +141,12 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString("token");
 
-      if (token == null) return;
+      if (token == null) {
+        logger.w("Token is null, cannot fetch water level");
+        return;
+      }
+
+      if (!suppressSnackBar) logger.d("Fetching latest water level...");
 
       final dio = Dio();
       dio.options.connectTimeout = const Duration(seconds: 10);
@@ -148,10 +160,15 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
       if (response.statusCode == 200 && response.data["success"] == true) {
         List<dynamic> waterLevels = response.data["data"];
         if (waterLevels.isNotEmpty) {
+          final item = waterLevels[0];
+          logger.i(
+            "Water level data received: Level=${item['waterLevel']}, Distance=${item['distance']}",
+          );
+
           // update latest data dan set valveToggleState secara otomatis:
           // - jika level air TERdeteksi "Rendah" => buka keran (true)
           // - jika level air Normal/Sedang/Tinggi => tutup keran (false)
-          final item = waterLevels[0];
+          // final item = waterLevels[0]; // Removed duplicate definition
           final rawLevel = item['waterLevel'] ?? 0;
           final int wl = (rawLevel is int)
               ? rawLevel
@@ -166,11 +183,16 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
             dischargeToggleState = _getDischargeStatusFromLevel(wl) == "Aktif";
           });
         } else {
+          logger.w("Water level data is empty");
           setState(() => isLoadingWater = false);
         }
       }
-    } on DioException catch (e) {
-      print("DioException fetch water level: ${e.message}");
+    } on DioException catch (e, stackTrace) {
+      logger.e(
+        "DioException fetching water level",
+        error: e,
+        stackTrace: stackTrace,
+      );
       if (!suppressSnackBar &&
           (e.type == DioExceptionType.connectionError ||
               e.type == DioExceptionType.connectionTimeout ||
@@ -192,8 +214,13 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
         }
       }
       setState(() => isLoadingWater = false);
-    } catch (e) {
-      print("Error fetch water level: $e");
+      setState(() => isLoadingWater = false);
+    } catch (e, stackTrace) {
+      logger.e(
+        "Unexpected error fetching water level",
+        error: e,
+        stackTrace: stackTrace,
+      );
       setState(() => isLoadingWater = false);
     }
   }

@@ -38,6 +38,7 @@ dependencies:
   dio: ^5.9.0
   shared_preferences: ^2.5.3
   fl_chart: ^0.66.0 # Add this line
+  logger: ^2.6.2
 
 dev_dependencies:
   flutter_test:
