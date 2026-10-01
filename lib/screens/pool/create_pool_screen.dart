@@ -4,7 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/api.dart';
 
 class CreatePoolScreen extends StatefulWidget {
-  const CreatePoolScreen({super.key});
+  const CreatePoolScreen({super.key, this.client});
+  final Dio? client;
 
   @override
   State<CreatePoolScreen> createState() => _CreatePoolScreenState();
@@ -22,8 +23,24 @@ class _CreatePoolScreenState extends State<CreatePoolScreen> {
 
   bool isLoading = false;
 
+  @override
+  void dispose() {
+    for (final controller in [
+      serialController,
+      namaWadahController,
+      kedalamanController,
+      keranTutupController,
+      keranNormalController,
+      keranBukaController
+    ]) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
   Future<void> createPool() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (isLoading || !_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
 
     setState(() => isLoading = true);
 
@@ -31,7 +48,8 @@ class _CreatePoolScreenState extends State<CreatePoolScreen> {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString("token");
 
-      final response = await Dio().post(
+      if (token == null) throw StateError('Sesi berakhir');
+      final response = await (widget.client ?? Dio()).post(
         "$baseUrl/api/pool",
         data: {
           "serial": serialController.text.trim(),
@@ -44,12 +62,14 @@ class _CreatePoolScreenState extends State<CreatePoolScreen> {
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
+      if (response.data["success"] != true)
+        throw StateError('Penyimpanan gagal');
       if (response.data["success"] == true) {
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text("Kolam berhasil ditambahkan!"),
+            content: const Text("Wadah berhasil ditambahkan!"),
             backgroundColor: Colors.green[600],
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -62,9 +82,10 @@ class _CreatePoolScreenState extends State<CreatePoolScreen> {
       }
     } catch (e) {
       debugPrint("Error create pool: $e");
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text("Gagal menambahkan kolam"),
+          content: const Text("Gagal menambahkan wadah. Silakan coba lagi."),
           backgroundColor: Colors.red[600],
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -79,271 +100,275 @@ class _CreatePoolScreenState extends State<CreatePoolScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text(
-          "Tambah Kolam",
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1F2937),
-          ),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final colors = ColorScheme.fromSeed(
+        seedColor: const Color(0xFF0878DE),
+        brightness: dark ? Brightness.dark : Brightness.light);
+    return Theme(
+      data: Theme.of(context).copyWith(colorScheme: colors),
+      child: Scaffold(
+        backgroundColor: dark ? colors.surface : const Color(0xFFF5F9FE),
+        appBar: AppBar(
+          title: const Text('Tambah wadah',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          backgroundColor: dark ? colors.surface : const Color(0xFFF5F9FE),
+          foregroundColor: colors.onSurface,
+          surfaceTintColor: Colors.transparent,
         ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Color(0xFF1F2937)),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            // Header Section
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Column(
-                children: [
-                  Icon(Icons.water_drop, size: 48, color: Colors.white),
-                  SizedBox(height: 12),
-                  Text(
-                    "Buat Wadah Baru",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    "Isi informasi wadah dengan lengkap",
-                    style: TextStyle(fontSize: 14, color: Colors.white70),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Form Section
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Informasi Umum",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1F2937),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: serialController,
-                    label: "Serial Device",
-                    icon: Icons.qr_code,
-                    hint: "Masukkan serial device",
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: namaWadahController,
-                    label: "Nama Wadah",
-                    icon: Icons.label,
-                    hint: "Masukkan nama wadah",
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: kedalamanController,
-                    label: "Kedalaman (cm)",
-                    icon: Icons.straighten,
-                    hint: "Masukkan kedalaman",
-                    isNumber: true,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Keran Settings Section
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Pengaturan Keran",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1F2937),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: keranTutupController,
-                    label: "Keran Tutup (cm)",
-                    icon: Icons.lock,
-                    hint: "Masukkan nilai keran tutup",
-                    isNumber: true,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: keranNormalController,
-                    label: "Keran Normal (cm)",
-                    icon: Icons.water,
-                    hint: "Masukkan nilai keran normal",
-                    isNumber: true,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: keranBukaController,
-                    label: "Keran Buka (cm)",
-                    icon: Icons.lock_open,
-                    hint: "Masukkan nilai keran buka",
-                    isNumber: true,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Submit Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: isLoading ? null : createPool,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B82F6),
-                  foregroundColor: Colors.white,
+        body: Center(
+            child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 680),
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              children: [
+                Container(
                   padding: const EdgeInsets.all(20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(9999),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFF168EED),
+                          Color(0xFF0865B5),
+                          Color(0xFF154675)
+                        ]),
+                    borderRadius: BorderRadius.circular(24),
                   ),
-                  elevation: 0,
-                  disabledBackgroundColor: Colors.grey[300],
-                ),
-                child: isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.save, size: 20),
-                          SizedBox(width: 8),
-                          Text(
-                            "Simpan Wadah",
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.water_drop_outlined,
+                            color: Colors.white, size: 28),
+                        const SizedBox(height: 12),
+                        const Text('Satu wadah baru,\nlebih mudah dipantau.',
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+                                color: Colors.white,
+                                fontSize: 24,
+                                height: 1.2,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5)),
+                        const SizedBox(height: 10),
+                        const Text(
+                            'Hubungkan perangkat dan tentukan pengaturan wadah Anda.',
+                            style: TextStyle(
+                                color: Color(0xFFE4F2FF),
+                                fontSize: 14,
+                                height: 1.5)),
+                      ]),
+                ),
+                const SizedBox(height: 20),
+                _section(colors,
+                    number: '01',
+                    title: 'Identitas wadah',
+                    description: 'Gunakan serial yang tertera pada perangkat.',
+                    children: [
+                      _field(colors,
+                          controller: namaWadahController,
+                          label: 'Nama wadah',
+                          hint: 'Contoh: Tangki utama',
+                          icon: Icons.label_outline_rounded),
+                      const SizedBox(height: 18),
+                      _field(colors,
+                          controller: serialController,
+                          label: 'Serial perangkat',
+                          hint: 'Masukkan serial perangkat',
+                          icon: Icons.qr_code_rounded),
+                      const SizedBox(height: 18),
+                      _field(colors,
+                          controller: kedalamanController,
+                          label: 'Kedalaman wadah',
+                          hint: 'Contoh: 120',
+                          icon: Icons.straighten_rounded,
+                          numeric: true,
+                          positive: true),
+                    ]),
+                const SizedBox(height: 16),
+                _section(colors,
+                    number: '02',
+                    title: 'Pengaturan keran',
+                    description:
+                        'Masukkan jarak dari sensor ke permukaan air untuk setiap ambang.',
+                    children: [
+                      _field(colors,
+                          controller: keranTutupController,
+                          label: 'Ambang keran tutup',
+                          hint: 'Masukkan jarak',
+                          icon: Icons.lock_outline_rounded,
+                          numeric: true),
+                      const SizedBox(height: 18),
+                      _field(colors,
+                          controller: keranNormalController,
+                          label: 'Ambang keran normal',
+                          hint: 'Masukkan jarak',
+                          icon: Icons.water_drop_outlined,
+                          numeric: true),
+                      const SizedBox(height: 18),
+                      _field(colors,
+                          controller: keranBukaController,
+                          label: 'Ambang keran buka',
+                          hint: 'Masukkan jarak',
+                          icon: Icons.lock_open_rounded,
+                          numeric: true,
+                          last: true),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                            color: colors.primaryContainer,
+                            borderRadius: BorderRadius.circular(12)),
+                        child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.info_outline_rounded,
+                                  size: 20, color: colors.onPrimaryContainer),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                  child: Text(
+                                      'Semua ukuran menggunakan sentimeter (cm). Sesuaikan nilai dengan pemasangan sensor Anda.',
+                                      style: TextStyle(
+                                          color: colors.onPrimaryContainer,
+                                          fontSize: 12,
+                                          height: 1.5))),
+                            ]),
                       ),
-              ),
+                    ]),
+              ],
             ),
-            const SizedBox(height: 20),
-          ],
+          ),
+        )),
+        bottomNavigationBar: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          child: Align(
+              heightFactor: 1,
+              child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 640),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: isLoading ? null : createPool,
+                      style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 18),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16))),
+                      child: Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 10,
+                          children: [
+                            if (isLoading)
+                              SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: colors.onSurfaceVariant))
+                            else
+                              const Icon(Icons.add_circle_outline_rounded,
+                                  size: 20),
+                            Text(
+                                isLoading ? 'Menyimpan wadah…' : 'Simpan wadah',
+                                style: const TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.w700)),
+                          ]),
+                    ),
+                  ))),
         ),
       ),
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required String hint,
-    bool isNumber = false,
-  }) {
+  Widget _section(ColorScheme colors,
+      {required String number,
+      required String title,
+      required String description,
+      required List<Widget> children}) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+          color: colors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(24),
+          border:
+              Border.all(color: colors.outlineVariant.withValues(alpha: 0.7))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                  color: colors.primaryContainer,
+                  borderRadius: BorderRadius.circular(12)),
+              child: Text(number,
+                  style: TextStyle(
+                      color: colors.onPrimaryContainer,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800))),
+          const SizedBox(width: 12),
+          Expanded(
+              child: Semantics(
+                  header: true,
+                  child: Text(title,
+                      style: TextStyle(
+                          color: colors.onSurface,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700)))),
+        ]),
+        const SizedBox(height: 10),
+        Text(description,
+            style: TextStyle(
+                color: colors.onSurfaceVariant, fontSize: 13, height: 1.5)),
+        const SizedBox(height: 24),
+        ...children,
+      ]),
+    );
+  }
+
+  Widget _field(ColorScheme colors,
+      {required TextEditingController controller,
+      required String label,
+      required String hint,
+      required IconData icon,
+      bool numeric = false,
+      bool positive = false,
+      bool last = false}) {
     return TextFormField(
       controller: controller,
-      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-      style: const TextStyle(fontSize: 16, color: Color(0xFF1F2937)),
+      enabled: !isLoading,
+      keyboardType: numeric ? TextInputType.number : TextInputType.text,
+      textInputAction: last ? TextInputAction.done : TextInputAction.next,
+      onFieldSubmitted: last ? (_) => createPool() : null,
+      autocorrect: !numeric && controller == namaWadahController,
+      style: TextStyle(color: colors.onSurface, fontSize: 16),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        labelStyle: const TextStyle(
-          color: Color(0xFF6B7280),
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
-        hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-        prefixIcon: Container(
-          margin: const EdgeInsets.all(12),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: const Color(0xFF3B82F6).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: const Color(0xFF3B82F6), size: 20),
-        ),
+        prefixIcon: Icon(icon, color: colors.primary, size: 22),
+        suffixText: numeric ? 'cm' : null,
         filled: true,
-        fillColor: Colors.grey[50],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[200]!),
-        ),
+        fillColor: colors.surfaceContainerLow,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[200]!),
-        ),
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: colors.outlineVariant)),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.red[400]!),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.red[400]!, width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: colors.primary, width: 2)),
+        errorMaxLines: 3,
       ),
       validator: (value) {
-        if (value == null || value.isEmpty) {
-          return "$label wajib diisi";
+        if (value == null || value.trim().isEmpty) return '$label wajib diisi';
+        if (numeric) {
+          final number = int.tryParse(value.trim());
+          if (number == null) return 'Masukkan angka bulat dalam cm';
+          if (number < 0 || (positive && number == 0))
+            return positive
+                ? 'Kedalaman harus lebih dari 0 cm'
+                : 'Jarak tidak boleh negatif';
         }
         return null;
       },

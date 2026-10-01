@@ -1,1 +1,1 @@
-const String baseUrl = 'https://simonika-backend-api-whzp.vercel.app';
+const String baseUrl = 'https://simonika-backend-admin.vercel.app';

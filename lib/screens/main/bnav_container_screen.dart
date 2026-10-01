@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import '../pool/pool_screen.dart';
 import '../profile/profile_screen.dart';
@@ -14,159 +12,163 @@ class BnavContainerScreen extends StatefulWidget {
 
 class _BnavContainerScreenState extends State<BnavContainerScreen> {
   int _selectedIndex = 0;
+  // Build destinations on first visit, keeping their state on subsequent visits.
+  final List<Widget?> _screens = [const PoolScreen(), null, null];
 
-  final List<Widget> _screens = const [
-    PoolScreen(),
-    HistoryScreen(),
-    ProfileScreen(),
+  static const _destinations = [
+    (
+      label: 'Wadah',
+      icon: Icons.water_drop_outlined,
+      activeIcon: Icons.water_drop_rounded
+    ),
+    (
+      label: 'Riwayat',
+      icon: Icons.history_outlined,
+      activeIcon: Icons.history_rounded
+    ),
+    (
+      label: 'Profil',
+      icon: Icons.person_outline_rounded,
+      activeIcon: Icons.person_rounded
+    ),
   ];
 
-  final List<Map<String, dynamic>> _navItems = [
-    {
-      'icon': Icons.water_drop_outlined,
-      'activeIcon': Icons.water_drop_rounded,
-      'label': 'Wadah',
-      'color': Colors.blue,
-    },
-    {
-      'icon': Icons.history_outlined,
-      'activeIcon': Icons.history_rounded,
-      'label': 'Riwayat',
-      'color': Colors.amber,
-    },
-    {
-      'icon': Icons.person_outline,
-      'activeIcon': Icons.person_rounded,
-      'label': 'Profil',
-      'color': Colors.purple,
-    },
-  ];
-
-  void _onItemTapped(int index) {
+  void _selectDestination(int index) {
+    if (_selectedIndex == index) return;
     setState(() {
+      _screens[index] ??= switch (index) {
+        1 => const HistoryScreen(),
+        2 => const ProfileScreen(),
+        _ => const PoolScreen(),
+      };
       _selectedIndex = index;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final colors = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF0878DE),
+      brightness: dark ? Brightness.dark : Brightness.light,
+    );
+    final duration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 200);
+
     return Scaffold(
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        transitionBuilder: (child, animation) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        child: _screens[_selectedIndex],
+      backgroundColor: dark ? colors.surface : const Color(0xFFF7FBFF),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: List.generate(_screens.length, (index) {
+          return TickerMode(
+            enabled: index == _selectedIndex,
+            child: _screens[index] ?? const SizedBox.shrink(),
+          );
+        }),
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 24,
-              offset: const Offset(0, -8),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-            child: Container(
+      bottomNavigationBar: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Align(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: DecoratedBox(
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.grey.shade100, width: 1),
+                borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.blue.withOpacity(0.08),
-                    blurRadius: 20,
-                    offset: const Offset(0, 4),
+                    color: colors.primary.withValues(alpha: dark ? 0.08 : 0.10),
+                    blurRadius: 28,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(
-                  _navItems.length,
-                  (index) => _buildNavItem(
-                    index: index,
-                    item: _navItems[index],
-                    isSelected: _selectedIndex == index,
+              child: Material(
+                color: colors.surfaceContainerLowest,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                  side: BorderSide(
+                      color: colors.outlineVariant.withValues(alpha: 0.6)),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: List.generate(_destinations.length, (index) {
+                      final destination = _destinations[index];
+                      final selected = index == _selectedIndex;
+                      return Expanded(
+                        child: Semantics(
+                          button: true,
+                          selected: selected,
+                          label: destination.label,
+                          onTap: () => _selectDestination(index),
+                          excludeSemantics: true,
+                          child: Tooltip(
+                            message: destination.label,
+                            child: InkWell(
+                              onTap: () => _selectDestination(index),
+                              borderRadius: BorderRadius.circular(20),
+                              splashColor:
+                                  colors.primary.withValues(alpha: 0.12),
+                              focusColor:
+                                  colors.primary.withValues(alpha: 0.16),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 8),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    AnimatedContainer(
+                                      duration: duration,
+                                      curve: Curves.easeOutCubic,
+                                      width: 64,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: selected
+                                            ? colors.primaryContainer
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Icon(
+                                        selected
+                                            ? destination.activeIcon
+                                            : destination.icon,
+                                        size: 24,
+                                        color: selected
+                                            ? colors.onPrimaryContainer
+                                            : colors.onSurfaceVariant,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      destination.label,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        height: 1.3,
+                                        fontWeight: selected
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                        color: selected
+                                            ? colors.primary
+                                            : colors.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
                   ),
                 ),
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem({
-    required int index,
-    required Map<String, dynamic> item,
-    required bool isSelected,
-  }) {
-    final color = item['color'] as Color;
-
-    return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _onItemTapped(index),
-          splashColor: color.withOpacity(0.1),
-          highlightColor: Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            padding: EdgeInsets.symmetric(
-              vertical: isSelected ? 10 : 10,
-              horizontal: 8,
-            ),
-            decoration: BoxDecoration(
-              color: isSelected ? color.withOpacity(0.1) : Colors.transparent,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AnimatedScale(
-                  duration: const Duration(milliseconds: 300),
-                  scale: isSelected ? 1.2 : 1.0,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? color.withOpacity(0.15)
-                          : Colors.transparent,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      isSelected ? item['activeIcon'] : item['icon'],
-                      color: color,
-                      size: 20,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                AnimatedOpacity(
-                  opacity: isSelected ? 1.0 : 0.7,
-                  duration: const Duration(milliseconds: 300),
-                  child: Text(
-                    item['label'],
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.w600,
-                      color: isSelected ? color : Colors.grey.shade600,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ),
-              ],
             ),
           ),
         ),

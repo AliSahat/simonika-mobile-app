@@ -4,7 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/api.dart';
 
 class UpdatePoolScreen extends StatefulWidget {
-  const UpdatePoolScreen({super.key});
+  const UpdatePoolScreen({super.key, this.client});
+  final Dio? client;
 
   @override
   State<UpdatePoolScreen> createState() => _UpdatePoolScreenState();
@@ -12,6 +13,9 @@ class UpdatePoolScreen extends StatefulWidget {
 
 class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _mqttFormKey = GlobalKey<FormState>();
+  String? _loadError;
+  bool _initialized = false;
 
   final TextEditingController serialController = TextEditingController();
   final TextEditingController namaWadahController = TextEditingController();
@@ -35,50 +39,80 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (poolId == null) {
+    if (!_initialized) {
+      _initialized = true;
       final arguments = ModalRoute.of(context)?.settings.arguments;
       if (arguments != null && arguments is String && arguments.isNotEmpty) {
         poolId = arguments;
         fetchPoolData();
       } else {
-        setState(() => isLoadingData = false);
+        setState(() {
+          isLoadingData = false;
+          _loadError = 'ID wadah tidak ditemukan.';
+        });
       }
     }
   }
 
+  @override
+  void dispose() {
+    for (final controller in [
+      serialController,
+      namaWadahController,
+      kedalamanController,
+      keranTutupController,
+      keranNormalController,
+      keranBukaController,
+      _jarakDasarController,
+      _batasBawahController,
+      _batasAtasController
+    ]) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
   Future<void> fetchPoolData() async {
+    setState(() {
+      isLoadingData = true;
+      _loadError = null;
+    });
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString("token");
 
-      final response = await Dio().get(
+      if (token == null) throw StateError('Sesi berakhir');
+      final response = await (widget.client ?? Dio()).get(
         "$baseUrl/api/pool/$poolId",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
+      if (!mounted) return;
       final poolData = response.data['data'];
 
       serialController.text = poolData['serial'] ?? '';
       namaWadahController.text = poolData['namaWadah'] ?? '';
       kedalamanController.text = (poolData['kedalaman'] ?? 0).toString();
       keranTutupController.text = (poolData['keranTutup'] ?? 0).toString();
-      keranTutupController.text = (poolData['keranTutup'] ?? 0).toString();
       keranNormalController.text = (poolData['keranNormal'] ?? 0).toString();
       keranBukaController.text = (poolData['keranBuka'] ?? 0).toString();
       isActive = poolData['isActive'] ?? false;
 
-      // dispose controllers on close is implicitly handled by garbage collector for basic types but manual dispose is good practice
-      // Initialize MQTT fields with default or empty, waiting for fetch if needed (but requirement says input fresh)
-      // _jarakDasarController.text ... (Left empty as requested)
-
       setState(() => isLoadingData = false);
     } catch (e) {
       debugPrint("Error fetch pool data: $e");
-      setState(() => isLoadingData = false);
+      if (mounted)
+        setState(() {
+          isLoadingData = false;
+          _loadError = 'Data wadah belum dapat dimuat. Silakan coba lagi.';
+        });
     }
   }
 
   Future<void> sendMqttConfig() async {
+    if (isLoading || isMqttLoading || !_mqttFormKey.currentState!.validate())
+      return;
+    FocusScope.of(context).unfocus();
     setState(() => isMqttLoading = true);
 
     try {
@@ -92,12 +126,15 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
         "batasAtas": int.tryParse(_batasAtasController.text.trim()) ?? 0,
       };
 
-      final response = await Dio().post(
+      if (token == null) throw StateError('Sesi berakhir');
+      final response = await (widget.client ?? Dio()).post(
         "$baseUrl/api/mqtt/publish",
         data: {"topic": "kolam/command", "payload": payload},
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
+      if (response.data["success"] != true)
+        throw StateError('Permintaan gagal');
       if (response.data["success"] == true) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -124,10 +161,9 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
   }
 
   Future<void> updatePool() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    // Validate MQTT fields only if they are filled? Or separate validation?
-    // Since it's a separate button, we don't enforce MQTT fields for general update.
+    if (isLoading || isMqttLoading || !_formKey.currentState!.validate())
+      return;
+    FocusScope.of(context).unfocus();
 
     setState(() => isLoading = true);
 
@@ -135,7 +171,8 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString("token");
 
-      final response = await Dio().put(
+      if (token == null) throw StateError('Sesi berakhir');
+      final response = await (widget.client ?? Dio()).put(
         "$baseUrl/api/pool/$poolId",
         data: {
           "serial": serialController.text.trim(),
@@ -149,6 +186,8 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
+      if (response.data["success"] != true)
+        throw StateError('Permintaan gagal');
       if (response.data["success"] == true) {
         if (!mounted) return;
 
@@ -167,6 +206,7 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
       }
     } catch (e) {
       debugPrint("Error update pool: $e");
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text("Gagal memperbarui wadah"),
@@ -184,451 +224,436 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoadingData) {
-      return Scaffold(
-        backgroundColor: Colors.grey[50],
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final colors = ColorScheme.fromSeed(
+        seedColor: const Color(0xFF0878DE),
+        brightness: dark ? Brightness.dark : Brightness.light);
+    return Theme(
+      data: Theme.of(context).copyWith(colorScheme: colors),
+      child: Scaffold(
+        backgroundColor: dark ? colors.surface : const Color(0xFFF5F9FE),
         appBar: AppBar(
-          title: const Text(
-            "Edit Wadah",
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1F2937),
-            ),
-          ),
-          backgroundColor: Colors.white,
-          elevation: 0,
-          centerTitle: true,
-          iconTheme: const IconThemeData(color: Color(0xFF1F2937)),
+          title: const Text('Edit wadah',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          backgroundColor: dark ? colors.surface : const Color(0xFFF5F9FE),
+          foregroundColor: colors.onSurface,
+          surfaceTintColor: Colors.transparent,
         ),
-        body: const Center(
-          child: CircularProgressIndicator(color: Color(0xFF3B82F6)),
-        ),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text(
-          "Edit Wadah",
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1F2937),
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Color(0xFF1F2937)),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            // Header Section
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Column(
-                children: [
-                  Icon(Icons.edit, size: 48, color: Colors.white),
-                  SizedBox(height: 12),
-                  Text(
-                    "Edit Wadah",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    "Perbarui informasi wadah",
-                    style: TextStyle(fontSize: 14, color: Colors.white70),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Form Section
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Informasi Umum",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1F2937),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: serialController,
-                    label: "Serial Device",
-                    icon: Icons.qr_code,
-                    hint: "Masukkan serial device",
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: namaWadahController,
-                    label: "Nama Wadah",
-                    icon: Icons.label,
-                    hint: "Masukkan nama wadah",
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: kedalamanController,
-                    label: "Kedalaman (cm)",
-                    icon: Icons.straighten,
-                    hint: "Masukkan kedalaman",
-                    isNumber: true,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Keran Settings Section
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Pengaturan Keran",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1F2937),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: keranTutupController,
-                    label: "Keran Tutup (cm)",
-                    icon: Icons.lock,
-                    hint: "Masukkan nilai keran tutup",
-                    isNumber: true,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: keranNormalController,
-                    label: "Keran Normal (cm)",
-                    icon: Icons.water,
-                    hint: "Masukkan nilai keran normal",
-                    isNumber: true,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: keranBukaController,
-                    label: "Keran Buka (cm)",
-                    icon: Icons.lock_open,
-                    hint: "Masukkan nilai keran buka",
-                    isNumber: true,
-                  ),
-                  const SizedBox(height: 16),
-                  // Active Status Switch
-                  Row(
-                    children: [
-                      Container(
-                        margin: const EdgeInsets.all(12),
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF3B82F6).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.power_settings_new,
-                          color: Color(0xFF3B82F6),
-                          size: 20,
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          "Status Aktif",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                      ),
-                      Switch(
-                        value: isActive,
-                        onChanged: (value) => setState(() => isActive = value),
-                        activeColor: const Color(0xFF3B82F6),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Konfigurasi Perangkat IoT",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1F2937),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Container(
-                        margin: const EdgeInsets.all(12),
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.settings_suggest,
-                          color: Color(0xFF10B981),
-                          size: 20,
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          "Mode Otomatis",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                      ),
-                      Switch(
-                        value: _modeAuto,
-                        onChanged: (value) => setState(() => _modeAuto = value),
-                        activeColor: const Color(0xFF10B981),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: _jarakDasarController,
-                    label: "Jarak Dasar (cm)",
-                    icon: Icons.vertical_align_bottom,
-                    hint: "Contoh: 120",
-                    isNumber: true,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: _batasBawahController,
-                    label: "Batas Bawah (cm)",
-                    icon: Icons.south,
-                    hint: "Contoh: 30",
-                    isNumber: true,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: _batasAtasController,
-                    label: "Batas Atas (cm)",
-                    icon: Icons.north,
-                    hint: "Contoh: 85",
-                    isNumber: true,
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: isMqttLoading ? null : sendMqttConfig,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF10B981),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.all(16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: isMqttLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.send, size: 20),
-                                SizedBox(width: 8),
-                                Text(
-                                  "Kirim Konfigurasi",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Submit Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: isLoading ? null : updatePool,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B82F6),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.all(20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(9999),
-                  ),
-                  elevation: 0,
-                  disabledBackgroundColor: Colors.grey[300],
-                ),
-                child: isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+        body: isLoadingData
+            ? Center(child: CircularProgressIndicator(color: colors.primary))
+            : _loadError != null
+                ? Center(
+                    child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child:
+                            Column(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.cloud_off_outlined,
+                              size: 40, color: colors.primary),
+                          const SizedBox(height: 16),
+                          Text(_loadError!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  color: colors.onSurfaceVariant,
+                                  fontSize: 16)),
+                          if (poolId != null) ...[
+                            const SizedBox(height: 16),
+                            FilledButton.tonal(
+                                onPressed: fetchPoolData,
+                                child: const Text('Coba lagi'))
+                          ],
+                        ])))
+                : Center(
+                    child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 680),
+                    child: Form(
+                      key: _formKey,
+                      child: ListView(
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                         children: [
-                          Icon(Icons.update, size: 20),
-                          SizedBox(width: 8),
-                          Text(
-                            "Perbarui Wadah",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color(0xFF168EED),
+                                    Color(0xFF0865B5),
+                                    Color(0xFF154675)
+                                  ]),
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.water_drop_outlined,
+                                      color: Colors.white, size: 28),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                      'Pengaturan tepat,\nmonitoring lebih mudah.',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 24,
+                                          height: 1.2,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: -0.5)),
+                                  const SizedBox(height: 10),
+                                  const Text(
+                                      'Perbarui identitas, status, dan ambang kendali wadah Anda.',
+                                      style: TextStyle(
+                                          color: Color(0xFFE4F2FF),
+                                          fontSize: 14,
+                                          height: 1.5)),
+                                ]),
+                          ),
+                          const SizedBox(height: 20),
+                          _section(colors,
+                              number: '01',
+                              title: 'Identitas wadah',
+                              description:
+                                  'Gunakan serial yang tertera pada perangkat.',
+                              children: [
+                                _field(colors,
+                                    controller: namaWadahController,
+                                    label: 'Nama wadah',
+                                    hint: 'Contoh: Tangki utama',
+                                    icon: Icons.label_outline_rounded),
+                                const SizedBox(height: 18),
+                                _field(colors,
+                                    controller: serialController,
+                                    label: 'Serial perangkat',
+                                    hint: 'Masukkan serial perangkat',
+                                    icon: Icons.qr_code_rounded),
+                                const SizedBox(height: 18),
+                                _field(colors,
+                                    controller: kedalamanController,
+                                    label: 'Kedalaman wadah',
+                                    hint: 'Contoh: 120',
+                                    icon: Icons.straighten_rounded,
+                                    numeric: true,
+                                    positive: true),
+                              ]),
+                          const SizedBox(height: 16),
+                          _section(colors,
+                              number: '02',
+                              title: 'Pengaturan keran',
+                              description:
+                                  'Masukkan jarak dari sensor ke permukaan air untuk setiap ambang.',
+                              children: [
+                                _field(colors,
+                                    controller: keranTutupController,
+                                    label: 'Ambang keran tutup',
+                                    hint: 'Masukkan jarak',
+                                    icon: Icons.lock_outline_rounded,
+                                    numeric: true),
+                                const SizedBox(height: 18),
+                                _field(colors,
+                                    controller: keranNormalController,
+                                    label: 'Ambang keran normal',
+                                    hint: 'Masukkan jarak',
+                                    icon: Icons.water_drop_outlined,
+                                    numeric: true),
+                                const SizedBox(height: 18),
+                                _field(colors,
+                                    controller: keranBukaController,
+                                    label: 'Ambang keran buka',
+                                    hint: 'Masukkan jarak',
+                                    icon: Icons.lock_open_rounded,
+                                    numeric: true,
+                                    last: true),
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                      color: colors.primaryContainer,
+                                      borderRadius: BorderRadius.circular(12)),
+                                  child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Icon(Icons.info_outline_rounded,
+                                            size: 20,
+                                            color: colors.onPrimaryContainer),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                            child: Text(
+                                                'Semua ukuran menggunakan sentimeter (cm). Sesuaikan nilai dengan pemasangan sensor Anda.',
+                                                style: TextStyle(
+                                                    color: colors
+                                                        .onPrimaryContainer,
+                                                    fontSize: 12,
+                                                    height: 1.5))),
+                                      ]),
+                                ),
+                              ]),
+                          const SizedBox(height: 16),
+                          _section(colors,
+                              number: '03',
+                              title: 'Status wadah',
+                              description: 'Tentukan status aktif wadah ini.',
+                              children: [
+                                SwitchListTile.adaptive(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(isActive
+                                      ? 'Wadah aktif'
+                                      : 'Wadah nonaktif'),
+                                  value: isActive,
+                                  onChanged: isLoading || isMqttLoading
+                                      ? null
+                                      : (value) =>
+                                          setState(() => isActive = value),
+                                ),
+                              ]),
+                          const SizedBox(height: 16),
+                          Container(
+                            decoration: BoxDecoration(
+                                color: colors.surfaceContainerLowest,
+                                borderRadius: BorderRadius.circular(24),
+                                border:
+                                    Border.all(color: colors.outlineVariant)),
+                            clipBehavior: Clip.antiAlias,
+                            child: ExpansionTile(
+                              title: const Text('Konfigurasi perangkat IoT',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700)),
+                              subtitle: const Text(
+                                  'Pengaturan perangkat • kirim terpisah',
+                                  style: TextStyle(fontSize: 12)),
+                              leading: Icon(
+                                  Icons.settings_input_component_outlined,
+                                  color: colors.primary),
+                              tilePadding: const EdgeInsets.all(16),
+                              childrenPadding:
+                                  const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                              children: [
+                                Form(
+                                    key: _mqttFormKey,
+                                    child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          Text(
+                                              'Konfigurasi dikirim ke perangkat melalui MQTT. Tombol simpan perubahan hanya memperbarui data wadah.',
+                                              style: TextStyle(
+                                                  color:
+                                                      colors.onSurfaceVariant,
+                                                  fontSize: 13,
+                                                  height: 1.5)),
+                                          SwitchListTile.adaptive(
+                                              contentPadding: EdgeInsets.zero,
+                                              title:
+                                                  const Text('Mode otomatis'),
+                                              value: _modeAuto,
+                                              onChanged: isLoading ||
+                                                      isMqttLoading
+                                                  ? null
+                                                  : (value) => setState(
+                                                      () => _modeAuto = value)),
+                                          const SizedBox(height: 12),
+                                          _field(colors,
+                                              controller: _jarakDasarController,
+                                              label: 'Jarak dasar',
+                                              hint: 'Contoh: 120',
+                                              icon: Icons
+                                                  .vertical_align_bottom_rounded,
+                                              numeric: true,
+                                              positive: true),
+                                          const SizedBox(height: 18),
+                                          _field(colors,
+                                              controller: _batasBawahController,
+                                              label: 'Batas bawah',
+                                              hint: 'Contoh: 30',
+                                              icon: Icons.south_rounded,
+                                              numeric: true),
+                                          const SizedBox(height: 18),
+                                          _field(colors,
+                                              controller: _batasAtasController,
+                                              label: 'Batas atas',
+                                              hint: 'Contoh: 85',
+                                              icon: Icons.north_rounded,
+                                              numeric: true),
+                                          const SizedBox(height: 20),
+                                          OutlinedButton(
+                                            onPressed:
+                                                isLoading || isMqttLoading
+                                                    ? null
+                                                    : sendMqttConfig,
+                                            style: OutlinedButton.styleFrom(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 16,
+                                                        horizontal: 12)),
+                                            child: Wrap(
+                                                alignment: WrapAlignment.center,
+                                                crossAxisAlignment:
+                                                    WrapCrossAlignment.center,
+                                                spacing: 8,
+                                                children: [
+                                                  if (isMqttLoading)
+                                                    SizedBox(
+                                                        width: 18,
+                                                        height: 18,
+                                                        child:
+                                                            CircularProgressIndicator(
+                                                                strokeWidth: 2,
+                                                                color: colors
+                                                                    .primary))
+                                                  else
+                                                    const Icon(
+                                                        Icons.send_outlined,
+                                                        size: 18),
+                                                  Text(isMqttLoading
+                                                      ? 'Mengirim konfigurasi…'
+                                                      : 'Kirim konfigurasi'),
+                                                ]),
+                                          ),
+                                        ]))
+                              ],
                             ),
                           ),
                         ],
                       ),
+                    ),
+                  )),
+        bottomNavigationBar: isLoadingData || _loadError != null
+            ? null
+            : SafeArea(
+                top: false,
+                minimum: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                child: Align(
+                    heightFactor: 1,
+                    child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 640),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed:
+                                isLoading || isMqttLoading ? null : updatePool,
+                            style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 18),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16))),
+                            child: Wrap(
+                                alignment: WrapAlignment.center,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 10,
+                                children: [
+                                  if (isLoading)
+                                    SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: colors.onSurfaceVariant))
+                                  else
+                                    const Icon(Icons.add_circle_outline_rounded,
+                                        size: 20),
+                                  Text(
+                                      isLoading
+                                          ? 'Menyimpan perubahan…'
+                                          : 'Simpan perubahan',
+                                      style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700)),
+                                ]),
+                          ),
+                        ))),
               ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
       ),
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required String hint,
-    bool isNumber = false,
-  }) {
+  Widget _section(ColorScheme colors,
+      {required String number,
+      required String title,
+      required String description,
+      required List<Widget> children}) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+          color: colors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(24),
+          border:
+              Border.all(color: colors.outlineVariant.withValues(alpha: 0.7))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                  color: colors.primaryContainer,
+                  borderRadius: BorderRadius.circular(12)),
+              child: Text(number,
+                  style: TextStyle(
+                      color: colors.onPrimaryContainer,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800))),
+          const SizedBox(width: 12),
+          Expanded(
+              child: Semantics(
+                  header: true,
+                  child: Text(title,
+                      style: TextStyle(
+                          color: colors.onSurface,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700)))),
+        ]),
+        const SizedBox(height: 10),
+        Text(description,
+            style: TextStyle(
+                color: colors.onSurfaceVariant, fontSize: 13, height: 1.5)),
+        const SizedBox(height: 24),
+        ...children,
+      ]),
+    );
+  }
+
+  Widget _field(ColorScheme colors,
+      {required TextEditingController controller,
+      required String label,
+      required String hint,
+      required IconData icon,
+      bool numeric = false,
+      bool positive = false,
+      bool last = false}) {
     return TextFormField(
       controller: controller,
-      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-      style: const TextStyle(fontSize: 16, color: Color(0xFF1F2937)),
+      enabled: !isLoading && !isMqttLoading,
+      keyboardType: numeric ? TextInputType.number : TextInputType.text,
+      textInputAction: last ? TextInputAction.done : TextInputAction.next,
+      onFieldSubmitted: last ? (_) => updatePool() : null,
+      autocorrect: !numeric && controller == namaWadahController,
+      style: TextStyle(color: colors.onSurface, fontSize: 16),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        labelStyle: const TextStyle(
-          color: Color(0xFF6B7280),
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
-        hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-        prefixIcon: Container(
-          margin: const EdgeInsets.all(12),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: const Color(0xFF3B82F6).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: const Color(0xFF3B82F6), size: 20),
-        ),
+        prefixIcon: Icon(icon, color: colors.primary, size: 22),
+        suffixText: numeric ? 'cm' : null,
         filled: true,
-        fillColor: Colors.grey[50],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[200]!),
-        ),
+        fillColor: colors.surfaceContainerLow,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[200]!),
-        ),
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: colors.outlineVariant)),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.red[400]!),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.red[400]!, width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: colors.primary, width: 2)),
+        errorMaxLines: 3,
       ),
       validator: (value) {
-        if (value == null || value.isEmpty) {
-          return "$label wajib diisi";
+        if (value == null || value.trim().isEmpty) return '$label wajib diisi';
+        if (numeric) {
+          final number = int.tryParse(value.trim());
+          if (number == null) return 'Masukkan angka bulat dalam cm';
+          if (number < 0 || (positive && number == 0))
+            return positive
+                ? 'Kedalaman harus lebih dari 0 cm'
+                : 'Jarak tidak boleh negatif';
         }
         return null;
       },
