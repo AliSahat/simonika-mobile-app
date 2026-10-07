@@ -136,7 +136,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
   double? get _level {
     final depth = _number(poolData?['kedalaman']);
     if (_levelCm == null || depth == null || depth <= 0) return null;
-    return ((_levelCm! / depth) * 100).clamp(0, 100);
+    return ((_levelCm! / depth) * 100).clamp(0, 100).toDouble();
   }
   String _value(dynamic value, String unit) =>
       value == null ? '—' : '$value $unit';
