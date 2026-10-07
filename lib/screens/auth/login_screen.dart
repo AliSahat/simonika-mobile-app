@@ -5,9 +5,12 @@ import 'dart:developer' as developer;
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/api.dart';
+import '../../services/google_auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.googleAuthService});
+
+  final GoogleAuthService? googleAuthService;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -21,6 +24,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final Dio dio = Dio();
   bool isLoading = false;
   bool _obscurePassword = true;
+
+  late final GoogleAuthService _googleAuthService =
+      widget.googleAuthService ?? GoogleAuthService();
 
   @override
   void dispose() {
@@ -105,6 +111,62 @@ class _LoginScreenState extends State<LoginScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
+  }
+
+  Future<void> loginWithGoogle() async {
+    if (isLoading) return;
+    FocusScope.of(context).unfocus();
+
+    setState(() => isLoading = true);
+
+    try {
+      final signedIn = await _googleAuthService.signIn();
+      if (!signedIn || !mounted) return;
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Text("Login Google berhasil!"),
+              ],
+            ),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        Navigator.pushReplacementNamed(context, "/bnav");
+      }
+    } catch (e) {
+      final message = e is GoogleLoginException
+          ? e.message
+          : 'Login Google gagal. Silakan coba lagi.';
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text(message)),
+              ],
+            ),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -464,6 +526,68 @@ class _LoginScreenState extends State<LoginScreen> {
                                                       size: 20),
                                               ],
                                             ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 24),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                                child: Divider(
+                                                    color: dark
+                                                        ? colors.outlineVariant
+                                                        : const Color(
+                                                            0xFFDCEBFA))),
+                                            Flexible(
+                                              flex: 3,
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 16),
+                                                child: Text('atau masuk dengan',
+                                                    textAlign: TextAlign.center,
+                                                    style: TextStyle(
+                                                        color: colors
+                                                            .onSurfaceVariant,
+                                                        fontSize: 12)),
+                                              ),
+                                            ),
+                                            Expanded(
+                                                child: Divider(
+                                                    color: dark
+                                                        ? colors.outlineVariant
+                                                        : const Color(
+                                                            0xFFDCEBFA))),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 24),
+                                        OutlinedButton(
+                                          onPressed: isLoading
+                                              ? null
+                                              : loginWithGoogle,
+                                          child: Text(
+                                            'Lanjutkan dengan Google',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w700,
+                                              color: colors.onSurface,
+                                            ),
+                                          ),
+                                          style: OutlinedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 16),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                            ),
+                                            side: BorderSide(
+                                              color: dark
+                                                  ? colors.outlineVariant
+                                                  : const Color(0xFFDCEBFA),
+                                            ),
+                                            backgroundColor: dark
+                                                ? colors.surfaceContainerHighest
+                                                : Colors.white,
                                           ),
                                         ),
                                       ],

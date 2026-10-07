@@ -45,3 +45,7 @@ app.*.map.json
 /android/app/release
 
 .vscode/templates
+
+# Local Google OAuth build configuration (never put client secrets here).
+config/google-auth.json
+ios/Flutter/GoogleSignIn.xcconfig
