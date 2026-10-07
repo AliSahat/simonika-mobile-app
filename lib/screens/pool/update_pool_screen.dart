@@ -99,6 +99,10 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
       keranNormalController.text = (poolData['batasBuangBerhenti'] ?? poolData['keranNormal'] ?? 0).toString();
       keranBukaController.text = (poolData['batasIsiMulai'] ?? poolData['keranBuka'] ?? 0).toString();
       pembuanganBatasBukaController.text = (poolData['batasBuangMulai'] ?? poolData['pembuanganBatasBuka'] ?? 0).toString();
+      _jarakDasarController.text = (poolData['jarakSensorDasar'] ?? poolData['kedalaman'] ?? 0).toString();
+      _batasBawahController.text = (poolData['batasIsiMulai'] ?? 0).toString();
+      _batasAtasController.text = (poolData['batasIsiBerhenti'] ?? 0).toString();
+      _modeAuto = poolData['modeAuto'] ?? true;
       isActive = poolData['isActive'] ?? false;
 
       setState(() => isLoadingData = false);
@@ -176,7 +180,7 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
           "serial": serialController.text.trim(),
           "namaWadah": namaWadahController.text.trim(),
           "kedalaman": int.parse(kedalamanController.text.trim()),
-          "jarakSensorDasar": int.parse(kedalamanController.text.trim()),
+          "jarakSensorDasar": int.tryParse(_jarakDasarController.text.trim()) ?? int.parse(kedalamanController.text.trim()),
           "batasIsiBerhenti": int.parse(keranTutupController.text.trim()),
           "batasBuangBerhenti": int.parse(keranNormalController.text.trim()),
           "batasIsiMulai": int.parse(keranBukaController.text.trim()),
@@ -190,11 +194,16 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
       if (response.data["success"] != true)
         throw StateError('Permintaan gagal');
       if (response.data["success"] == true) {
+        await (widget.client ?? Dio()).post(
+          "$baseUrl/api/mqtt/publish",
+          data: {"poolId": poolId},
+          options: Options(headers: {"Authorization": "Bearer $token"}),
+        );
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text("Wadah berhasil diperbarui!"),
+            content: const Text("Wadah diperbarui dan konfigurasi dikirim ke perangkat!"),
             backgroundColor: Colors.green[600],
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
