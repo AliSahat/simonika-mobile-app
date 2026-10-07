@@ -23,6 +23,7 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
   final TextEditingController keranTutupController = TextEditingController();
   final TextEditingController keranNormalController = TextEditingController();
   final TextEditingController keranBukaController = TextEditingController();
+  final TextEditingController pembuanganBatasBukaController = TextEditingController();
 
   bool isLoading = false;
   bool isLoadingData = true;
@@ -63,6 +64,7 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
       keranTutupController,
       keranNormalController,
       keranBukaController,
+      pembuanganBatasBukaController,
       _jarakDasarController,
       _batasBawahController,
       _batasAtasController
@@ -93,9 +95,10 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
       serialController.text = poolData['serial'] ?? '';
       namaWadahController.text = poolData['namaWadah'] ?? '';
       kedalamanController.text = (poolData['kedalaman'] ?? 0).toString();
-      keranTutupController.text = (poolData['keranTutup'] ?? 0).toString();
-      keranNormalController.text = (poolData['keranNormal'] ?? 0).toString();
-      keranBukaController.text = (poolData['keranBuka'] ?? 0).toString();
+      keranTutupController.text = (poolData['batasIsiBerhenti'] ?? poolData['keranTutup'] ?? 0).toString();
+      keranNormalController.text = (poolData['batasBuangBerhenti'] ?? poolData['keranNormal'] ?? 0).toString();
+      keranBukaController.text = (poolData['batasIsiMulai'] ?? poolData['keranBuka'] ?? 0).toString();
+      pembuanganBatasBukaController.text = (poolData['batasBuangMulai'] ?? poolData['pembuanganBatasBuka'] ?? 0).toString();
       isActive = poolData['isActive'] ?? false;
 
       setState(() => isLoadingData = false);
@@ -119,17 +122,12 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString("token");
 
-      final payload = {
-        "modeAuto": _modeAuto,
-        "jarakDasar": int.tryParse(_jarakDasarController.text.trim()) ?? 0,
-        "batasBawah": int.tryParse(_batasBawahController.text.trim()) ?? 0,
-        "batasAtas": int.tryParse(_batasAtasController.text.trim()) ?? 0,
-      };
+      final payload = {"poolId": poolId};
 
       if (token == null) throw StateError('Sesi berakhir');
       final response = await (widget.client ?? Dio()).post(
         "$baseUrl/api/mqtt/publish",
-        data: {"topic": "kolam/command", "payload": payload},
+        data: payload,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -178,9 +176,12 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
           "serial": serialController.text.trim(),
           "namaWadah": namaWadahController.text.trim(),
           "kedalaman": int.parse(kedalamanController.text.trim()),
-          "keranTutup": int.parse(keranTutupController.text.trim()),
-          "keranNormal": int.parse(keranNormalController.text.trim()),
-          "keranBuka": int.parse(keranBukaController.text.trim()),
+          "jarakSensorDasar": int.parse(kedalamanController.text.trim()),
+          "batasIsiBerhenti": int.parse(keranTutupController.text.trim()),
+          "batasBuangBerhenti": int.parse(keranNormalController.text.trim()),
+          "batasIsiMulai": int.parse(keranBukaController.text.trim()),
+          "batasBuangMulai": int.parse(pembuanganBatasBukaController.text.trim()),
+          "modeAuto": _modeAuto,
           "isActive": isActive,
         },
         options: Options(headers: {"Authorization": "Bearer $token"}),
@@ -340,27 +341,34 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
                               number: '02',
                               title: 'Pengaturan keran',
                               description:
-                                  'Masukkan jarak dari sensor ke permukaan air untuk setiap ambang.',
+                                  'Atur tinggi air dalam cm untuk mulai dan berhenti mengisi maupun membuang.',
                               children: [
                                 _field(colors,
                                     controller: keranTutupController,
-                                    label: 'Ambang keran tutup',
+                                    label: 'Isi berhenti',
                                     hint: 'Masukkan jarak',
                                     icon: Icons.lock_outline_rounded,
                                     numeric: true),
                                 const SizedBox(height: 18),
                                 _field(colors,
                                     controller: keranNormalController,
-                                    label: 'Ambang keran normal',
+                                    label: 'Buang berhenti',
                                     hint: 'Masukkan jarak',
                                     icon: Icons.water_drop_outlined,
                                     numeric: true),
                                 const SizedBox(height: 18),
                                 _field(colors,
                                     controller: keranBukaController,
-                                    label: 'Ambang keran buka',
-                                    hint: 'Masukkan jarak',
+                                    label: 'Isi mulai',
+                                    hint: 'Contoh: 30',
                                     icon: Icons.lock_open_rounded,
+                                    numeric: true),
+                                const SizedBox(height: 18),
+                                _field(colors,
+                                    controller: pembuanganBatasBukaController,
+                                    label: 'Buang mulai',
+                                    hint: 'Contoh: 95',
+                                    icon: Icons.arrow_downward_rounded,
                                     numeric: true,
                                     last: true),
                                 const SizedBox(height: 16),
@@ -379,7 +387,7 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
                                         const SizedBox(width: 10),
                                         Expanded(
                                             child: Text(
-                                                'Semua ukuran menggunakan sentimeter (cm). Sesuaikan nilai dengan pemasangan sensor Anda.',
+                                                'Contoh wadah 100 cm: isi mulai 30, buang berhenti 75, isi berhenti 90, buang mulai 95.',
                                                 style: TextStyle(
                                                     color: colors
                                                         .onPrimaryContainer,
