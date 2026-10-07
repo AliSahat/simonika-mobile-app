@@ -22,8 +22,11 @@ class _Adapter implements HttpClientAdapter {
             ? []
             : [
                 {
-                  'waterLevel': advancing ? 75 + readings : 75,
-                  'distance': 100,
+                  'waterLevel': advancing ? 90 + readings : 90,
+                  'distance': 30,
+                  'fillValveOpen': false,
+                  'drainValveOpen': false,
+                  'controlState': 'IDLE',
                   'createdAt': advancing
                       ? DateTime.utc(2026, 10, 1, 12)
                           .add(Duration(seconds: readings * 5))
@@ -36,9 +39,11 @@ class _Adapter implements HttpClientAdapter {
             'serial': 'AIR-001',
             'isActive': true,
             'kedalaman': 120,
-            'keranTutup': 100,
-            'keranNormal': 70,
-            'keranBuka': 30
+            'jarakSensorDasar': 123,
+            'batasIsiBerhenti': 100,
+            'batasBuangBerhenti': 70,
+            'batasIsiMulai': 30,
+            'batasBuangMulai': 110
           };
     return ResponseBody.fromString(
         jsonEncode({'success': true, 'data': data}), 200,

@@ -94,6 +94,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
     if (mounted) setState(() => isLoadingWater = true);
     try {
       final response = await _dio.get('$baseUrl/api/water/level',
+          queryParameters: {'poolId': _poolId, 'limit': 30},
           options: await _authOptions());
       if (response.data['success'] != true)
         throw StateError('Data tidak tersedia');
@@ -131,7 +132,12 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
 
   double? _number(dynamic value) =>
       value is num ? value.toDouble() : double.tryParse('$value');
-  double? get _level => _number(latestWaterData?['waterLevel']);
+  double? get _levelCm => _number(latestWaterData?['waterLevel']);
+  double? get _level {
+    final depth = _number(poolData?['kedalaman']);
+    if (_levelCm == null || depth == null || depth <= 0) return null;
+    return ((_levelCm! / depth) * 100).clamp(0, 100).toDouble();
+  }
   String _value(dynamic value, String unit) =>
       value == null ? '—' : '$value $unit';
   String get _levelStatus => _level == null
@@ -142,24 +148,15 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
               ? 'Sedang'
               : 'Rendah';
   String get _valveStatus {
-    final distance = _number(latestWaterData?['distance']);
-    if (distance == null) return 'Belum ada data';
-    final close = _number(poolData?['keranTutup']);
-    final open = _number(poolData?['keranBuka']);
-    if (close != null && (distance - close).abs() <= 2) return 'Tertutup';
-    if (open != null && (distance - open).abs() <= 2) return 'Terbuka';
-    return 'Normal';
+    final value = latestWaterData?['fillValveOpen'];
+    if (value is! bool) return 'Belum ada data';
+    return value ? 'Terbuka' : 'Tertutup';
   }
 
   String get _dischargeStatus {
-    if (_level == null) return 'Belum ada data';
-    final open = _number(poolData?['pembuanganBatasBuka']) ?? 80;
-    final close = _number(poolData?['pembuanganBatasTutup']) ?? 20;
-    return _level! > open
-        ? 'Aktif'
-        : _level! <= close
-            ? 'Tertutup'
-            : 'Normal';
+    final value = latestWaterData?['drainValveOpen'];
+    if (value is! bool) return 'Belum ada data';
+    return value ? 'Aktif' : 'Tertutup';
   }
 
   @override
@@ -339,9 +336,13 @@ class _DetailPoolScreenState extends State<DetailPoolScreen> {
                                               Icons.waves_outlined, colors)),
                                       const SizedBox(height: 20),
                                       _metric(
+                                          'Tinggi air',
+                                          _value(_levelCm?.toStringAsFixed(1), 'cm'),
+                                          colors),
+                                      const SizedBox(height: 10),
+                                      _metric(
                                           'Jarak sensor ke air',
-                                          _value(latestWaterData?['distance'],
-                                              'cm'),
+                                          _value(latestWaterData?['distance'], 'cm'),
                                           colors),
                                       if (_waterError != null) ...[
                                         const SizedBox(height: 12),
