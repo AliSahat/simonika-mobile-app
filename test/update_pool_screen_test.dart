@@ -12,7 +12,7 @@ class _Adapter implements HttpClientAdapter {
       Future<void>? cancel) async {
     if (options.method == 'GET')
       return ResponseBody.fromString(
-          '{"success":true,"data":{"namaWadah":"Tangki awal","serial":"AIR-001","kedalaman":120,"keranTutup":100,"keranNormal":70,"keranBuka":30,"isActive":true}}',
+          '{"success":true,"data":{"namaWadah":"Tangki awal","serial":"AIR-001","kedalaman":120,"jarakSensorDasar":123,"batasIsiMulai":30,"batasIsiBerhenti":100,"batasBuangMulai":110,"batasBuangBerhenti":70,"modeAuto":true,"isActive":true}}',
           200,
           headers: {
             Headers.contentTypeHeader: ['application/json']
@@ -68,9 +68,10 @@ void main() {
       ('Nama wadah', 'Tangki utama'),
       ('Serial perangkat', 'AIR-001'),
       ('Kedalaman wadah', '120'),
-      ('Ambang keran tutup', '100'),
-      ('Ambang keran normal', '70'),
-      ('Ambang keran buka', '30')
+      ('Isi berhenti', '100'),
+      ('Buang berhenti', '70'),
+      ('Isi mulai', '30'),
+      ('Buang mulai', '110')
     ]) {
       await fill(tester, entry.$1, entry.$2);
     }
@@ -87,9 +88,12 @@ void main() {
       'namaWadah': 'Tangki utama',
       'serial': 'AIR-001',
       'kedalaman': 120,
-      'keranTutup': 100,
-      'keranNormal': 70,
-      'keranBuka': 30,
+      'jarakSensorDasar': 123,
+      'batasIsiBerhenti': 100,
+      'batasBuangBerhenti': 70,
+      'batasIsiMulai': 30,
+      'batasBuangMulai': 110,
+      'modeAuto': true,
       'isActive': true
     });
     expect(result, true);
@@ -133,7 +137,7 @@ void main() {
                   client: Dio()..httpClientAdapter = _Adapter())),
         ));
         await tester.pumpAndSettle();
-        await tester.scrollUntilVisible(field('Ambang keran buka'), 120,
+        await tester.scrollUntilVisible(field('Buang mulai'), 120,
             scrollable: find
                 .descendant(
                     of: find.byType(ListView),
