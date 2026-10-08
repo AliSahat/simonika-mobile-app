@@ -6,18 +6,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:simonika_mobile_app/screens/pool/update_pool_screen.dart';
 
 class _Adapter implements HttpClientAdapter {
-  Map<String, dynamic>? payload;
+  Map<String, dynamic>? updatePayload;
+  Map<String, dynamic>? publishPayload;
   @override
   Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? stream,
       Future<void>? cancel) async {
     if (options.method == 'GET')
       return ResponseBody.fromString(
-          '{"success":true,"data":{"namaWadah":"Tangki awal","serial":"AIR-001","kedalaman":120,"keranTutup":100,"keranNormal":70,"keranBuka":30,"isActive":true}}',
+          '{"success":true,"data":{"namaWadah":"Tangki awal","serial":"AIR-001","kedalaman":120,"jarakSensorDasar":135,"batasIsiMulai":20,"batasBuangBerhenti":40,"batasIsiBerhenti":80,"batasBuangMulai":100,"modeAuto":true,"isActive":true}}',
           200,
           headers: {
             Headers.contentTypeHeader: ['application/json']
           });
-    payload = Map<String, dynamic>.from(options.data);
+    if (options.path.endsWith('/api/mqtt/publish')) {
+      publishPayload = Map<String, dynamic>.from(options.data);
+    } else {
+      updatePayload = Map<String, dynamic>.from(options.data);
+    }
     return ResponseBody.fromString('{"success":true}', 200, headers: {
       Headers.contentTypeHeader: ['application/json']
     });
@@ -31,10 +36,7 @@ Finder field(String label) => find.byWidgetPredicate(
     (widget) => widget is TextField && widget.decoration?.labelText == label);
 Future<void> fill(WidgetTester tester, String label, String value) async {
   await tester.scrollUntilVisible(field(label), 120,
-      scrollable: find
-          .descendant(
-              of: find.byType(ListView), matching: find.byType(Scrollable))
-          .first);
+      scrollable: find.byType(Scrollable).first);
   await tester.ensureVisible(field(label));
   await tester.enterText(field(label), value);
   tester.testTextInput.hide();
@@ -44,16 +46,15 @@ Future<void> fill(WidgetTester tester, String label, String value) async {
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({'token': 'test-token'}));
   testWidgets(
-      'Update loads data and posts numeric settings and returns success to the list',
+      'Update saves the new configuration before publishing only poolId',
       (tester) async {
     final adapter = _Adapter();
-    bool? result;
     await tester.pumpWidget(MaterialApp(
         home: Builder(
             builder: (context) => Scaffold(
                 body: TextButton(
                     onPressed: () async {
-                      result = await Navigator.push<bool>(
+                      await Navigator.push<bool>(
                           context,
                           MaterialPageRoute(
                               settings:
@@ -68,31 +69,32 @@ void main() {
       ('Nama wadah', 'Tangki utama'),
       ('Serial perangkat', 'AIR-001'),
       ('Kedalaman wadah', '120'),
-      ('Ambang keran tutup', '100'),
-      ('Ambang keran normal', '70'),
-      ('Ambang keran buka', '30')
+      ('Jarak sensor ke dasar', '135'),
+      ('Mulai isi', '20'),
+      ('Berhenti buang', '40'),
+      ('Berhenti isi', '80'),
+      ('Mulai buang', '100')
     ]) {
       await fill(tester, entry.$1, entry.$2);
     }
-    await tester.scrollUntilVisible(find.text('Konfigurasi perangkat IoT'), 120,
-        scrollable: find
-            .descendant(
-                of: find.byType(ListView), matching: find.byType(Scrollable))
-            .first);
-    await tester.tap(find.text('Konfigurasi perangkat IoT'));
+    await tester.tap(find.text('Simpan'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Simpan perubahan'));
-    await tester.pumpAndSettle();
-    expect(adapter.payload, {
+    expect(adapter.updatePayload, {
       'namaWadah': 'Tangki utama',
       'serial': 'AIR-001',
       'kedalaman': 120,
-      'keranTutup': 100,
-      'keranNormal': 70,
-      'keranBuka': 30,
+      'jarakSensorDasar': 135,
+      'batasIsiMulai': 20,
+      'batasIsiBerhenti': 80,
+      'batasBuangMulai': 100,
+      'batasBuangBerhenti': 40,
+      'modeAuto': true,
       'isActive': true
     });
-    expect(result, true);
+    expect(adapter.publishPayload, isNull);
+    await tester.tap(find.text('Kirim ke broker'));
+    await tester.pumpAndSettle();
+    expect(adapter.publishPayload, {'poolId': 'pool-1'});
   });
   testWidgets('Invalid depth shows an inline error and sends no request',
       (tester) async {
@@ -104,10 +106,10 @@ void main() {
                 UpdatePoolScreen(client: Dio()..httpClientAdapter = adapter))));
     await tester.pumpAndSettle();
     await fill(tester, 'Kedalaman wadah', 'abc');
-    await tester.tap(find.text('Simpan perubahan'));
+    await tester.tap(find.text('Simpan'));
     await tester.pumpAndSettle();
-    expect(find.text('Masukkan angka bulat dalam cm'), findsOneWidget);
-    expect(adapter.payload, isNull);
+    expect(find.text('Masukkan angka yang valid'), findsOneWidget);
+    expect(adapter.updatePayload, isNull);
   });
   testWidgets('Update form fits small phone, landscape, tablet and large text',
       (tester) async {
@@ -133,14 +135,10 @@ void main() {
                   client: Dio()..httpClientAdapter = _Adapter())),
         ));
         await tester.pumpAndSettle();
-        await tester.scrollUntilVisible(field('Ambang keran buka'), 120,
-            scrollable: find
-                .descendant(
-                    of: find.byType(ListView),
-                    matching: find.byType(Scrollable))
-                .first);
+        await tester.scrollUntilVisible(field('Mulai buang'), 120,
+            scrollable: find.byType(Scrollable).first);
         expect(tester.takeException(), isNull);
-        expect(find.text('Simpan perubahan').hitTestable(), findsOneWidget);
+        expect(find.text('Simpan').hitTestable(), findsOneWidget);
       }
     }
   });

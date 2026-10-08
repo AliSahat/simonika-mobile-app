@@ -20,14 +20,11 @@ class _Adapter implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
-Finder field(String label) => find.byWidgetPredicate((widget) =>
-    widget is TextField && widget.decoration?.labelText == label);
+Finder field(String label) => find.byWidgetPredicate(
+    (widget) => widget is TextField && widget.decoration?.labelText == label);
 Future<void> fill(WidgetTester tester, String label, String value) async {
   await tester.scrollUntilVisible(field(label), 120,
-      scrollable: find
-          .descendant(
-              of: find.byType(ListView), matching: find.byType(Scrollable))
-          .first);
+      scrollable: find.byType(Scrollable).first);
   await tester.ensureVisible(field(label));
   await tester.enterText(field(label), value);
   tester.testTextInput.hide();
@@ -58,21 +55,26 @@ void main() {
       ('Nama wadah', 'Tangki utama'),
       ('Serial perangkat', 'AIR-001'),
       ('Kedalaman wadah', '120'),
-      ('Ambang keran tutup', '100'),
-      ('Ambang keran normal', '70'),
-      ('Ambang keran buka', '30')
+      ('Jarak sensor ke dasar', '135'),
+      ('Mulai isi', '20'),
+      ('Berhenti buang', '40'),
+      ('Berhenti isi', '80'),
+      ('Mulai buang', '100')
     ]) {
       await fill(tester, entry.$1, entry.$2);
     }
-    await tester.tap(find.text('Simpan wadah'));
+    await tester.tap(find.text('Simpan konfigurasi'));
     await tester.pumpAndSettle();
     expect(adapter.payload, {
       'namaWadah': 'Tangki utama',
       'serial': 'AIR-001',
       'kedalaman': 120,
-      'keranTutup': 100,
-      'keranNormal': 70,
-      'keranBuka': 30
+      'jarakSensorDasar': 135,
+      'batasIsiMulai': 20,
+      'batasIsiBerhenti': 80,
+      'batasBuangMulai': 100,
+      'batasBuangBerhenti': 40,
+      'modeAuto': true,
     });
     expect(result, true);
   });
@@ -82,9 +84,9 @@ void main() {
     await tester.pumpWidget(MaterialApp(
         home: CreatePoolScreen(client: Dio()..httpClientAdapter = adapter)));
     await fill(tester, 'Kedalaman wadah', 'abc');
-    await tester.tap(find.text('Simpan wadah'));
+    await tester.tap(find.text('Simpan konfigurasi'));
     await tester.pumpAndSettle();
-    expect(find.text('Masukkan angka bulat dalam cm'), findsOneWidget);
+    expect(find.text('Masukkan angka yang valid'), findsOneWidget);
     expect(adapter.payload, isNull);
   });
   testWidgets('Create form fits small phone, landscape, tablet and large text',
@@ -108,14 +110,10 @@ void main() {
           home: const CreatePoolScreen(),
         ));
         await tester.pumpAndSettle();
-        await tester.scrollUntilVisible(field('Ambang keran buka'), 120,
-            scrollable: find
-                .descendant(
-                    of: find.byType(ListView),
-                    matching: find.byType(Scrollable))
-                .first);
+        await tester.scrollUntilVisible(field('Mulai buang'), 120,
+            scrollable: find.byType(Scrollable).first);
         expect(tester.takeException(), isNull);
-        expect(find.text('Simpan wadah').hitTestable(), findsOneWidget);
+        expect(find.text('Simpan konfigurasi').hitTestable(), findsOneWidget);
       }
     }
   });

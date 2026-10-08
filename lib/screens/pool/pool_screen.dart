@@ -173,6 +173,38 @@ class _PoolScreenState extends State<PoolScreen> {
     }
   }
 
+  Future<void> retryPublish(String poolId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) return;
+      
+      final response = await _dio.post('$baseUrl/api/mqtt/publish',
+          data: {'poolId': poolId},
+          options: Options(headers: {'Authorization': 'Bearer $token'}));
+          
+      if (response.data is Map && response.data['success'] != true) {
+        throw StateError('Publish ditolak');
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Konfigurasi berhasil dikirim ke broker. Penerapan oleh perangkat belum terkonfirmasi.')));
+    } catch (error) {
+      debugPrint('[MQTT DEBUG] Error retry publish: $error');
+      if (error is DioException) {
+        debugPrint('[MQTT DEBUG] URL: ${error.requestOptions.uri}');
+        debugPrint('[MQTT DEBUG] HTTP Status: ${error.response?.statusCode}');
+        debugPrint('[MQTT DEBUG] Response Body: ${error.response?.data}');
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Konfigurasi sudah tersimpan, tetapi belum berhasil dikirim. Anda dapat mencoba lagi.'),
+        action: SnackBarAction(
+            label: 'Kirim ulang', onPressed: () => retryPublish(poolId)),
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -552,10 +584,25 @@ class _PoolScreenState extends State<PoolScreen> {
     final name = '${pool['namaWadah'] ?? 'Wadah air'}';
     final metrics = [
       ('Kedalaman', pool['kedalaman'], Icons.straighten_rounded),
-      ('Tutup', pool['keranTutup'], Icons.lock_outline_rounded),
-      ('Normal', pool['keranNormal'], Icons.water_drop_outlined),
-      ('Buka', pool['keranBuka'], Icons.lock_open_rounded),
+      (
+        'Sensor ke dasar',
+        pool['jarakSensorDasar'],
+        Icons.vertical_align_bottom_rounded
+      ),
+      ('Mulai isi', pool['batasIsiMulai'], Icons.play_arrow_rounded),
+      ('Berhenti isi', pool['batasIsiBerhenti'], Icons.stop_rounded),
+      ('Mulai buang', pool['batasBuangMulai'], Icons.upload_rounded),
+      ('Berhenti buang', pool['batasBuangBerhenti'], Icons.download_rounded),
     ];
+    final configurationComplete = [
+      'kedalaman',
+      'jarakSensorDasar',
+      'batasIsiMulai',
+      'batasIsiBerhenti',
+      'batasBuangMulai',
+      'batasBuangBerhenti',
+      'modeAuto',
+    ].every((key) => pool[key] != null);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -602,10 +649,18 @@ class _PoolScreenState extends State<PoolScreen> {
               if (value == 'delete') {
                 await deletePool(id, name);
               } else {
-                final result = await Navigator.pushNamed(
-                    context, '/update-pool',
-                    arguments: id);
-                if (result == true && mounted) await fetchPools();
+                final result = await Navigator.pushNamed(context, '/update-pool', arguments: id);
+                if (mounted) {
+                  await fetchPools();
+                  if (result is Map && result['retryPublish'] == true) {
+                    final currentPoolId = result['poolId'] as String;
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: const Text('Konfigurasi sudah tersimpan, tetapi belum berhasil dikirim. Anda dapat mencoba lagi.'),
+                      action: SnackBarAction(
+                          label: 'Kirim ulang', onPressed: () => retryPublish(currentPoolId)),
+                    ));
+                  }
+                }
               }
             },
             itemBuilder: (context) => [
@@ -629,6 +684,18 @@ class _PoolScreenState extends State<PoolScreen> {
           ),
         ]),
         const SizedBox(height: 16),
+        if (!configurationComplete) ...[
+          Material(
+            color: colors.errorContainer,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text('Konfigurasi belum lengkap • buka Edit wadah',
+                  style: TextStyle(color: colors.onErrorContainer)),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         Align(
             alignment: Alignment.centerLeft,
             child: Container(

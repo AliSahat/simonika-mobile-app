@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'widgets/water_backdrop.dart';
+import 'widgets/google_sign_in_button.dart';
 import 'dart:developer' as developer;
 
 import 'package:dio/dio.dart';
@@ -23,6 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final Dio dio = Dio();
   bool isLoading = false;
+  bool _isGoogleLoading = false;
   bool _obscurePassword = true;
 
   late final GoogleAuthService _googleAuthService =
@@ -125,7 +127,10 @@ class _LoginScreenState extends State<LoginScreen> {
     if (isLoading) return;
     FocusScope.of(context).unfocus();
 
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+      _isGoogleLoading = true;
+    });
 
     try {
       final signedIn = await _googleAuthService.signIn();
@@ -172,7 +177,10 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() => isLoading = false);
+        setState(() {
+          isLoading = false;
+          _isGoogleLoading = false;
+        });
       }
     }
   }
@@ -501,7 +509,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                                   WrapCrossAlignment.center,
                                               spacing: 12,
                                               children: [
-                                                if (isLoading)
+                                                if (isLoading && !_isGoogleLoading)
                                                   SizedBox(
                                                     height: 20,
                                                     width: 20,
@@ -511,7 +519,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                                             .onSurfaceVariant),
                                                   ),
                                                 Text(
-                                                  isLoading
+                                                  isLoading && !_isGoogleLoading
                                                       ? 'Sedang masuk…'
                                                       : 'Masuk ke akun',
                                                   style: const TextStyle(
@@ -519,7 +527,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                                       fontWeight:
                                                           FontWeight.w700),
                                                 ),
-                                                if (!isLoading)
+                                                if (!isLoading || _isGoogleLoading)
                                                   const Icon(
                                                       Icons
                                                           .arrow_forward_rounded,
@@ -528,7 +536,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(height: 24),
+                                        const SizedBox(height: 20),
                                         Row(
                                           children: [
                                             Expanded(
@@ -543,7 +551,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                                 padding:
                                                     const EdgeInsets.symmetric(
                                                         horizontal: 16),
-                                                child: Text('atau masuk dengan',
+                                                child: Text('atau',
                                                     textAlign: TextAlign.center,
                                                     style: TextStyle(
                                                         color: colors
@@ -559,36 +567,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                                             0xFFDCEBFA))),
                                           ],
                                         ),
-                                        const SizedBox(height: 24),
-                                        OutlinedButton(
+                                        const SizedBox(height: 20),
+                                        GoogleSignInButton(
+                                          isLoading: _isGoogleLoading,
                                           onPressed: isLoading
                                               ? null
                                               : loginWithGoogle,
-                                          child: Text(
-                                            'Lanjutkan dengan Google',
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w700,
-                                              color: colors.onSurface,
-                                            ),
-                                          ),
-                                          style: OutlinedButton.styleFrom(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 16),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                            ),
-                                            side: BorderSide(
-                                              color: dark
-                                                  ? colors.outlineVariant
-                                                  : const Color(0xFFDCEBFA),
-                                            ),
-                                            backgroundColor: dark
-                                                ? colors.surfaceContainerHighest
-                                                : Colors.white,
-                                          ),
                                         ),
                                       ],
                                     ),
