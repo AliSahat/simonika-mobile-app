@@ -6,10 +6,14 @@ class AnimatedWaterTank extends StatefulWidget {
       {super.key,
       required this.level,
       required this.colors,
+      this.depth,
       this.inletActive = false,
       this.outletActive = false,
       this.thresholds = const {}});
   final double? level;
+
+  /// Configured tank depth in cm. Telemetry [level] remains a percentage.
+  final double? depth;
   final ColorScheme colors;
   final bool inletActive;
   final bool outletActive;
@@ -68,6 +72,7 @@ class _AnimatedWaterTankState extends State<AnimatedWaterTank>
             builder: (context, fill, _) => CustomPaint(
                 painter: _TankPainter(
                     fill: fill,
+                    depth: widget.depth,
                     waves: _waves,
                     colors: widget.colors,
                     inletActive: widget.inletActive,
@@ -83,6 +88,7 @@ class _AnimatedWaterTankState extends State<AnimatedWaterTank>
 class _TankPainter extends CustomPainter {
   _TankPainter(
       {required this.fill,
+      required this.depth,
       required this.waves,
       required this.colors,
       required this.inletActive,
@@ -90,6 +96,7 @@ class _TankPainter extends CustomPainter {
       required this.thresholds})
       : super(repaint: waves);
   final double fill;
+  final double? depth;
   final Animation<double> waves;
   final ColorScheme colors;
   final bool inletActive;
@@ -148,18 +155,21 @@ class _TankPainter extends CustomPainter {
       }
     }
     canvas.restore();
+    final validDepth = depth != null && depth!.isFinite && depth! > 0;
     for (var i = 0; i <= 4; i++) {
       final y = rect.bottom - rect.height * i / 4;
+      final value = (validDepth ? depth! : 100) * i / 4;
       final label = TextPainter(
           text: TextSpan(
-              text: '${i * 25}',
+              text: value.toStringAsFixed(value % 1 == 0 ? 0 : 1),
               style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
                   color: colors.onSurfaceVariant)),
           textDirection: TextDirection.ltr)
-        ..layout();
-      label.paint(canvas, Offset(rect.left - 30, y - label.height / 2));
+        ..layout(maxWidth: 34);
+      label.paint(
+          canvas, Offset(rect.left - 10 - label.width, y - label.height / 2));
       canvas.drawLine(
           Offset(rect.left - 8, y),
           Offset(rect.left - 3, y),
@@ -270,6 +280,7 @@ class _TankPainter extends CustomPainter {
   @override
   bool shouldRepaint(_TankPainter old) =>
       old.fill != fill ||
+      old.depth != depth ||
       old.colors != colors ||
       old.inletActive != inletActive ||
       old.outletActive != outletActive ||

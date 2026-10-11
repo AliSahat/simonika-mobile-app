@@ -178,6 +178,11 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
   double? _number(dynamic value) =>
       value is num ? value.toDouble() : double.tryParse('$value');
   double? get _level => _number(latestWaterData?['waterLevel']);
+  double? get _tankDepth {
+    final depth = _number(poolData?['kedalaman']);
+    return depth != null && depth.isFinite && depth > 0 ? depth : null;
+  }
+
   String _value(dynamic value, String unit) =>
       value == null ? '—' : '$value $unit';
   String get _controlState =>
@@ -568,9 +573,14 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
   Widget _levelCard(ColorScheme colors) {
     final timestamp =
         DateTime.tryParse('${latestWaterData?['createdAt']}')?.toLocal();
+    final depth = _tankDepth;
+    final height =
+        _level == null || depth == null ? null : _level! / 100 * depth;
     final levelLabel = _level == null
         ? '—'
-        : '${_level!.toStringAsFixed(_level! % 1 == 0 ? 0 : 1)}%';
+        : height != null
+            ? '${height.toStringAsFixed(height % 1 == 0 ? 0 : 1)} cm'
+            : '${_level!.toStringAsFixed(_level! % 1 == 0 ? 0 : 1)}%';
     final subtitle = _waterError != null
         ? 'Data terakhir • pembaruan gagal'
         : _level == null
@@ -582,6 +592,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
         fit: BoxFit.scaleDown,
         child: AnimatedWaterTank(
           level: _level,
+          depth: depth,
           colors: colors,
           inletActive: latestWaterData?['fillValveOpen'] == true,
           outletActive: latestWaterData?['drainValveOpen'] == true,
@@ -613,6 +624,15 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
         ),
       ),
       const SizedBox(height: 8),
+      if (depth != null) ...[
+        Text(
+          '${_level == null ? '—' : '${_level!.toStringAsFixed(1)}%'} • '
+          'Kedalaman ${depth.toStringAsFixed(depth % 1 == 0 ? 0 : 1)} cm',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12),
+        ),
+        const SizedBox(height: 8),
+      ],
       Text(subtitle,
           textAlign: TextAlign.center,
           style: TextStyle(
@@ -810,8 +830,8 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
       );
 
   Map<String, double> get _tankThresholds {
-    final depth = _number(poolData?['kedalaman']);
-    if (depth == null || depth <= 0) return {};
+    final depth = _tankDepth;
+    if (depth == null) return {};
     return {
       for (final entry in [
         ('Isi mulai', 'batasIsiMulai'),
@@ -819,9 +839,9 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
         ('Buang mulai', 'batasBuangMulai'),
         ('Buang berhenti', 'batasBuangBerhenti')
       ])
-        if (_number(poolData?[entry.$2]) != null)
-          entry.$1: ((depth - _number(poolData?[entry.$2])!) / depth * 100)
-              .clamp(0.0, 100.0),
+        if (_number(poolData?[entry.$2])?.isFinite == true)
+          entry.$1:
+              (_number(poolData?[entry.$2])! / depth * 100).clamp(0.0, 100.0),
     };
   }
 

@@ -108,7 +108,7 @@ void main() {
     expect(tester.getTopLeft(find.text('Tangki utama')), headerPosition);
     await tester.tap(find.text('Monitoring'));
     await tester.pumpAndSettle();
-    expect(find.text('75%'), findsOneWidget);
+    expect(find.text('90 cm'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -128,7 +128,13 @@ void main() {
   testWidgets('Monitoring shows telemetry state without deriving valve status',
       (tester) async {
     final adapter = await openDetail(tester);
-    expect(find.text('75%'), findsOneWidget);
+    expect(find.text('90 cm'), findsOneWidget);
+    expect(find.text('75.0% • Kedalaman 120 cm'), findsOneWidget);
+    final tank =
+        tester.widget<AnimatedWaterTank>(find.byType(AnimatedWaterTank));
+    expect(tank.depth, 120);
+    expect(tank.thresholds['Isi mulai'], closeTo(20 / 120 * 100, 0.001));
+    expect(tank.thresholds['Buang mulai'], closeTo(100 / 120 * 100, 0.001));
     expect(adapter.waterQueries.single, {'poolId': 'pool-1', 'limit': 30});
     await tester.scrollUntilVisible(find.text('Status otomatis'), 200,
         scrollable: _slideScrollable(0));

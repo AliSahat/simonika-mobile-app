@@ -121,3 +121,37 @@ cocokkan `GOOGLE_CLIENT_ID` backend dengan `GOOGLE_WEB_CLIENT_ID` aplikasi.
 
 Referensi: [plugin Google Sign-In 6.3.0](https://pub.dev/packages/google_sign_in/versions/6.3.0),
 [konfigurasi Google Sign-In iOS](https://developers.google.com/identity/sign-in/ios/start-integrating).
+
+## Notifikasi kondisi air (di dalam aplikasi)
+
+Pusat notifikasi dapat dibuka dari ikon lonceng pada halaman Wadah atau menu
+Notifikasi di Profil. Saat pengguna masuk dan aplikasi berada di foreground,
+monitor memeriksa semua wadah aktif setiap 30 detik. Notifikasi baru muncul
+sebagai banner dan badge belum dibaca; mengetuk item membuka detail wadah.
+
+- **Air rendah:** `waterLevel <= batasIsiMulai`.
+- **Air tinggi:** `waterLevel >= batasBuangMulai`.
+- **Data terlambat:** pembacaan terbaru berusia minimal 5 menit. Wadah baru tanpa
+  pembacaan diberi tenggang 5 menit sejak `createdAt`.
+- Pembacaan lama tidak dipakai untuk peringatan level air. Kegagalan API hanya
+  ditampilkan sebagai kesalahan pemeriksaan, bukan dianggap perangkat offline.
+- Peringatan hanya dibuat saat kondisi berubah. Margin pemulihan 2% kedalaman
+  (minimum 0,5 cm, dibatasi setengah jarak kedua ambang) mengurangi pengulangan
+  akibat fluktuasi sensor. Ini tidak mengubah kontrol otomatis perangkat.
+- Pengguna dapat mematikan masing-masing jenis peringatan dan menandai riwayat
+  sebagai dibaca. Preferensi berlaku untuk kejadian baru.
+- Maksimum 100 item, status baca, preferensi, dan status deduplikasi disimpan
+  lokal menggunakan ID akun dari `/api/auth/profile`. Riwayat tidak disinkronkan
+  antarperangkat. Tidak ada data contoh yang dimasukkan ke riwayat pengguna.
+
+Monitor berhenti saat aplikasi di background atau pengguna keluar. Ini **bukan
+push notification**: peringatan saat aplikasi ditutup memerlukan evaluasi di
+backend dan layanan push (beserta pendaftaran token perangkat). Ketika aplikasi
+dibuka kembali, pemeriksaan menggunakan kondisi terbaru, bukan seluruh kejadian
+selama aplikasi ditutup.
+
+Verifikasi:
+
+```bash
+flutter test test/water_alert_test.dart test/notification_service_test.dart test/notif_screen_test.dart
+```

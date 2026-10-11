@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/notification_service.dart';
 import '../pool/pool_screen.dart';
 import '../profile/profile_screen.dart';
 import '../history/history_screen.dart';
@@ -10,7 +11,54 @@ class BnavContainerScreen extends StatefulWidget {
   State<BnavContainerScreen> createState() => _BnavContainerScreenState();
 }
 
-class _BnavContainerScreenState extends State<BnavContainerScreen> {
+class _BnavContainerScreenState extends State<BnavContainerScreen>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    NotificationService.instance.addListener(_announceAlert);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) NotificationService.instance.start();
+    });
+  }
+
+  String? _announcedAlert;
+
+  void _announceAlert() {
+    final alert = NotificationService.instance.latestAlert;
+    if (alert == null || alert.id == _announcedAlert) return;
+    _announcedAlert = alert.id;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || alert.isRead) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('${alert.title} • ${alert.poolName}'),
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: 'Lihat',
+          onPressed: () => Navigator.pushNamed(context, '/notif'),
+        ),
+      ));
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      NotificationService.instance.start();
+    } else {
+      NotificationService.instance.pause();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    NotificationService.instance.removeListener(_announceAlert);
+    NotificationService.instance.stop();
+    super.dispose();
+  }
+
   int _selectedIndex = 0;
   // Build destinations on first visit, keeping their state on subsequent visits.
   final List<Widget?> _screens = [const PoolScreen(), null, null];

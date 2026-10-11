@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/api.dart';
+import '../../widgets/notification_button.dart';
 
 class PoolScreen extends StatefulWidget {
   const PoolScreen({super.key, this.client});
@@ -178,17 +179,18 @@ class _PoolScreenState extends State<PoolScreen> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
       if (token == null) return;
-      
+
       final response = await _dio.post('$baseUrl/api/mqtt/publish',
           data: {'poolId': poolId},
           options: Options(headers: {'Authorization': 'Bearer $token'}));
-          
+
       if (response.data is Map && response.data['success'] != true) {
         throw StateError('Publish ditolak');
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Konfigurasi berhasil dikirim ke broker. Penerapan oleh perangkat belum terkonfirmasi.')));
+          content: Text(
+              'Konfigurasi berhasil dikirim ke broker. Penerapan oleh perangkat belum terkonfirmasi.')));
     } catch (error) {
       debugPrint('[MQTT DEBUG] Error retry publish: $error');
       if (error is DioException) {
@@ -198,7 +200,8 @@ class _PoolScreenState extends State<PoolScreen> {
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Konfigurasi sudah tersimpan, tetapi belum berhasil dikirim. Anda dapat mencoba lagi.'),
+        content: const Text(
+            'Konfigurasi sudah tersimpan, tetapi belum berhasil dikirim. Anda dapat mencoba lagi.'),
         action: SnackBarAction(
             label: 'Kirim ulang', onPressed: () => retryPublish(poolId)),
       ));
@@ -267,6 +270,7 @@ class _PoolScreenState extends State<PoolScreen> {
                                                 letterSpacing: -0.7,
                                                 fontWeight: FontWeight.w800))),
                                   ])),
+                              const NotificationButton(),
                             ]),
                             const SizedBox(height: 8),
                             Text('Pantau dan kelola wadah air Anda.',
@@ -649,15 +653,19 @@ class _PoolScreenState extends State<PoolScreen> {
               if (value == 'delete') {
                 await deletePool(id, name);
               } else {
-                final result = await Navigator.pushNamed(context, '/update-pool', arguments: id);
+                final result = await Navigator.pushNamed(
+                    context, '/update-pool',
+                    arguments: id);
                 if (mounted) {
                   await fetchPools();
                   if (result is Map && result['retryPublish'] == true) {
                     final currentPoolId = result['poolId'] as String;
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: const Text('Konfigurasi sudah tersimpan, tetapi belum berhasil dikirim. Anda dapat mencoba lagi.'),
+                      content: const Text(
+                          'Konfigurasi sudah tersimpan, tetapi belum berhasil dikirim. Anda dapat mencoba lagi.'),
                       action: SnackBarAction(
-                          label: 'Kirim ulang', onPressed: () => retryPublish(currentPoolId)),
+                          label: 'Kirim ulang',
+                          onPressed: () => retryPublish(currentPoolId)),
                     ));
                   }
                 }
