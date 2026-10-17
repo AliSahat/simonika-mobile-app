@@ -584,20 +584,12 @@ class _PoolScreenState extends State<PoolScreen> {
 
   Widget _poolCard(dynamic pool, ColorScheme colors) {
     final active = pool['isActive'] == true;
+    final modeAuto = pool['modeAuto'] is bool ? pool['modeAuto'] as bool : null;
     final id = '${pool['_id'] ?? ''}';
     final name = '${pool['namaWadah'] ?? 'Wadah air'}';
-    final metrics = [
-      ('Kedalaman', pool['kedalaman'], Icons.straighten_rounded),
-      (
-        'Sensor ke dasar',
-        pool['jarakSensorDasar'],
-        Icons.vertical_align_bottom_rounded
-      ),
-      ('Mulai isi', pool['batasIsiMulai'], Icons.play_arrow_rounded),
-      ('Berhenti isi', pool['batasIsiBerhenti'], Icons.stop_rounded),
-      ('Mulai buang', pool['batasBuangMulai'], Icons.upload_rounded),
-      ('Berhenti buang', pool['batasBuangBerhenti'], Icons.download_rounded),
-    ];
+    final depth = pool['kedalaman'];
+    final fillStart = pool['batasIsiMulai'];
+    final drainStart = pool['batasBuangMulai'];
     final configurationComplete = [
       'kedalaman',
       'jarakSensorDasar',
@@ -607,11 +599,12 @@ class _PoolScreenState extends State<PoolScreen> {
       'batasBuangBerhenti',
       'modeAuto',
     ].every((key) => pool[key] != null);
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
           color: colors.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(22),
           border:
               Border.all(color: colors.outlineVariant.withValues(alpha: 0.7)),
           boxShadow: [
@@ -625,10 +618,15 @@ class _PoolScreenState extends State<PoolScreen> {
           Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                  color: colors.primaryContainer,
+                  color: active
+                      ? colors.primaryContainer
+                      : colors.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(16)),
               child: Icon(Icons.water_drop_outlined,
-                  color: colors.onPrimaryContainer, size: 24)),
+                  color: active
+                      ? colors.onPrimaryContainer
+                      : colors.onSurfaceVariant,
+                  size: 24)),
           const SizedBox(width: 12),
           Expanded(
               child: Column(
@@ -637,15 +635,15 @@ class _PoolScreenState extends State<PoolScreen> {
                 Text(name,
                     style: TextStyle(
                         color: colors.onSurface,
-                        fontSize: 19,
+                        fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        height: 1.3)),
-                const SizedBox(height: 6),
-                Text('Serial: ${pool['serial'] ?? '—'}',
+                        height: 1.25)),
+                const SizedBox(height: 4),
+                Text('Serial • ${pool['serial'] ?? '—'}',
                     style: TextStyle(
                         color: colors.onSurfaceVariant,
                         fontSize: 12,
-                        height: 1.5)),
+                        height: 1.4)),
               ])),
           PopupMenuButton<String>(
             tooltip: 'Opsi wadah $name',
@@ -691,89 +689,89 @@ class _PoolScreenState extends State<PoolScreen> {
                 Icon(Icons.more_horiz_rounded, color: colors.onSurfaceVariant),
           ),
         ]),
-        const SizedBox(height: 16),
-        if (!configurationComplete) ...[
-          Material(
-            color: colors.errorContainer,
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text('Konfigurasi belum lengkap • buka Edit wadah',
-                  style: TextStyle(color: colors.onErrorContainer)),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _statusPill(
+              colors,
+              icon: active
+                  ? Icons.check_circle_outline_rounded
+                  : Icons.pause_circle_outline_rounded,
+              label: active ? 'Aktif' : 'Nonaktif',
+              highlighted: active,
             ),
+            _statusPill(
+              colors,
+              icon: modeAuto == true
+                  ? Icons.hdr_auto_outlined
+                  : Icons.tune_rounded,
+              label: modeAuto == null
+                  ? 'Mode belum diatur'
+                  : modeAuto
+                      ? 'Otomatis'
+                      : 'Manual',
+              highlighted: modeAuto == true,
+            ),
+            if (depth != null)
+              _statusPill(
+                colors,
+                icon: Icons.straighten_rounded,
+                label: 'Kedalaman $depth cm',
+                highlighted: false,
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (!configurationComplete)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: colors.errorContainer.withValues(alpha: 0.75),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(children: [
+              Icon(Icons.info_outline_rounded,
+                  size: 18, color: colors.onErrorContainer),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Konfigurasi belum lengkap • buka Edit wadah',
+                  style: TextStyle(
+                      color: colors.onErrorContainer,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500),
+                ),
+              ),
+            ]),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: colors.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(children: [
+              Icon(Icons.waves_rounded, size: 18, color: colors.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Rentang kerja otomatis: $fillStart–$drainStart cm',
+                  style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500),
+                ),
+              ),
+            ]),
           ),
-          const SizedBox(height: 12),
-        ],
-        Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                  color: active
-                      ? colors.primaryContainer
-                      : colors.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8)),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(
-                    active
-                        ? Icons.check_circle_outline_rounded
-                        : Icons.pause_circle_outline_rounded,
-                    size: 16,
-                    color: active
-                        ? colors.onPrimaryContainer
-                        : colors.onSurfaceVariant),
-                const SizedBox(width: 6),
-                Text(active ? 'Aktif' : 'Nonaktif',
-                    style: TextStyle(
-                        color: active
-                            ? colors.onPrimaryContainer
-                            : colors.onSurfaceVariant,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600)),
-              ]),
-            )),
-        const SizedBox(height: 20),
-        LayoutBuilder(builder: (context, constraints) {
-          final single = constraints.maxWidth < 260 ||
-              MediaQuery.textScalerOf(context).scale(14) > 22;
-          final width =
-              single ? constraints.maxWidth : (constraints.maxWidth - 12) / 2;
-          return Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: metrics
-                  .map((metric) => SizedBox(
-                      width: width,
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                            color: colors.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(14)),
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(metric.$3, color: colors.primary, size: 20),
-                              const SizedBox(height: 10),
-                              Text(metric.$1,
-                                  style: TextStyle(
-                                      color: colors.onSurfaceVariant,
-                                      fontSize: 12)),
-                              const SizedBox(height: 4),
-                              Text(
-                                  '${metric.$2 ?? '—'}${metric.$2 == null ? '' : ' cm'}',
-                                  style: TextStyle(
-                                      color: colors.onSurface,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700)),
-                            ]),
-                      )))
-                  .toList());
-        }),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         FilledButton.tonal(
           onPressed: () => goToDetail(id),
           style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14))),
           child: const Wrap(
@@ -787,6 +785,39 @@ class _PoolScreenState extends State<PoolScreen> {
                         TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
                 Icon(Icons.arrow_forward_rounded, size: 18)
               ]),
+        ),
+      ]),
+    );
+  }
+
+  Widget _statusPill(
+    ColorScheme colors, {
+    required IconData icon,
+    required String label,
+    required bool highlighted,
+  }) {
+    final bg =
+        highlighted ? colors.primaryContainer : colors.surfaceContainerLow;
+    final fg =
+        highlighted ? colors.onPrimaryContainer : colors.onSurfaceVariant;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 15, color: fg),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: fg,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ]),
     );

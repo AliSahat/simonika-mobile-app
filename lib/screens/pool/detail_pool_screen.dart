@@ -32,7 +32,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
   Timer? _pollingTimer;
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  static const _pageLabels = ['Monitoring', 'Tren', 'Pengaturan'];
+  static const _pageLabels = ['Monitoring', 'Tren', 'Spesifikasi'];
   late final AnimationController _entranceController = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 900),
@@ -791,7 +791,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
         colors,
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           _sectionHeader(
-            'Pengaturan wadah',
+            'Spesifikasi wadah',
             'Batas kerja yang sedang digunakan',
             Icons.tune_rounded,
             colors,

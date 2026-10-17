@@ -18,6 +18,14 @@ void main() {
       ));
       await tester.ensureVisible(find.text(action.$1));
       await tester.tap(find.text(action.$1));
+      if (action.$2 == '/login') {
+        await tester.pump(const Duration(milliseconds: 1500));
+        expect(find.text('Login destination'), findsNothing);
+        expect(
+          find.byKey(const Key('welcome_entry_progress_text')),
+          findsOneWidget,
+        );
+      }
       await tester.pumpAndSettle();
       expect(
           find.text(action.$2 == '/login'

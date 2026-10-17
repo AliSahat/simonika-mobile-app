@@ -101,7 +101,7 @@ void main() {
     expect(find.text('Tren level air'), findsOneWidget);
     expect(tester.getTopLeft(find.text('Tangki utama')), headerPosition);
 
-    await tester.tap(find.text('Pengaturan'));
+    await tester.tap(find.text('Spesifikasi'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Berhenti buang'), 180,
         scrollable: _slideScrollable(2));
