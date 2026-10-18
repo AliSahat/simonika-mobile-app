@@ -162,7 +162,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         child: Divider(
                                             height: 1,
                                             color: colors.outlineVariant
-                                                .withValues(alpha: 0.6)),
+                                                .withOpacity(0.6)),
                                       ),
                                       _info(
                                           'Username',
@@ -189,10 +189,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: colors.error,
                                     backgroundColor: colors.errorContainer
-                                        .withValues(alpha: dark ? 0.16 : 0.25),
+                                        .withOpacity(dark ? 0.16 : 0.25),
                                     side: BorderSide(
                                         color: colors.error
-                                            .withValues(alpha: 0.18)),
+                                            .withOpacity(0.18)),
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 20, vertical: 18),
                                     shape: RoundedRectangleBorder(
@@ -272,10 +272,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           color: colors.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(28),
           border:
-              Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
+              Border.all(color: colors.outlineVariant.withOpacity(0.5)),
           boxShadow: [
             BoxShadow(
-              color: colors.primary.withValues(alpha: 0.08),
+              color: colors.primary.withOpacity(0.08),
               blurRadius: 28,
               offset: const Offset(0, 12),
             ),
@@ -335,7 +335,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               borderRadius: BorderRadius.circular(24),
                               border: Border.all(
                                   color:
-                                      colors.primary.withValues(alpha: 0.16)),
+                                      colors.primary.withOpacity(0.16)),
                             ),
                             child: Text(_initials,
                                 textAlign: TextAlign.center,
@@ -378,7 +378,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: colors.primaryContainer.withValues(alpha: 0.45),
+                      color: colors.primaryContainer.withOpacity(0.45),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text('Akun SIMONIKA',
@@ -397,7 +397,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: colors.surfaceContainerLow,
                 border: Border(
                     top: BorderSide(
-                        color: colors.outlineVariant.withValues(alpha: 0.5))),
+                        color: colors.outlineVariant.withOpacity(0.5))),
               ),
               child: Row(children: [
                 Icon(Icons.waves_rounded, color: colors.primary, size: 24),
@@ -456,7 +456,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           color: colors.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(24),
           border:
-              Border.all(color: colors.outlineVariant.withValues(alpha: 0.6)),
+              Border.all(color: colors.outlineVariant.withOpacity(0.6)),
         ),
         child: child,
       );
@@ -468,7 +468,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         decoration: BoxDecoration(
           color: muted
               ? colors.surfaceContainerHigh
-              : colors.primaryContainer.withValues(alpha: 0.45),
+              : colors.primaryContainer.withOpacity(0.45),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Icon(icon,
@@ -502,7 +502,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         color: colors.surfaceContainerLowest,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.6)),
+          side: BorderSide(color: colors.outlineVariant.withOpacity(0.6)),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(children: [
@@ -536,7 +536,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       height: 1,
       indent: 80,
       endIndent: 20,
-      color: colors.outlineVariant.withValues(alpha: 0.6));
+      color: colors.outlineVariant.withOpacity(0.6));
 
   Widget _setting(
       String title, String subtitle, IconData icon, ColorScheme colors,
@@ -611,7 +611,7 @@ class _WaterContourPainter extends CustomPainter {
       ..strokeWidth = 1;
     final center = Offset(size.width * 0.93, size.height * 0.85);
     for (var i = 0; i < 9; i++) {
-      paint.color = const Color(0xFF8DDFF4).withValues(alpha: 0.10 + i * 0.012);
+      paint.color = const Color(0xFF8DDFF4).withOpacity(0.10 + i * 0.012);
       canvas.drawOval(
           Rect.fromCenter(
               center: center, width: 72 + i * 42, height: 48 + i * 28),

@@ -492,7 +492,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
           borderRadius: BorderRadius.circular(28),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF087E8B).withValues(alpha: 0.22),
+              color: const Color(0xFF087E8B).withOpacity(0.22),
               blurRadius: 28,
               offset: const Offset(0, 12),
             ),
@@ -507,7 +507,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
               height: 132,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
+                color: Colors.white.withOpacity(0.08),
               ),
             ),
           ),
@@ -519,7 +519,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
               height: 112,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.06),
+                color: Colors.white.withOpacity(0.06),
               ),
             ),
           ),
@@ -527,9 +527,9 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.16),
+                color: Colors.white.withOpacity(0.16),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+                border: Border.all(color: Colors.white.withOpacity(0.18)),
               ),
               child: const Icon(Icons.water_drop_rounded,
                   color: Colors.white, size: 24),
@@ -548,7 +548,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
                   const SizedBox(height: 8),
                   Text('Serial • ${poolData!['serial'] ?? '—'}',
                       style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.78),
+                          color: Colors.white.withOpacity(0.78),
                           fontSize: 12,
                           fontWeight: FontWeight.w500)),
                   const SizedBox(height: 12),
@@ -720,7 +720,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colors.primaryContainer.withValues(alpha: 0.45),
+        color: colors.primaryContainer.withOpacity(0.45),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -762,7 +762,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
           color: colors.surfaceContainerLow,
           borderRadius: BorderRadius.circular(20),
           border:
-              Border.all(color: colors.outlineVariant.withValues(alpha: 0.55)),
+              Border.all(color: colors.outlineVariant.withOpacity(0.55)),
         ),
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -868,7 +868,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
             Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                    color: colors.primaryContainer.withValues(alpha: 0.32),
+                    color: colors.primaryContainer.withOpacity(0.32),
                     borderRadius: BorderRadius.circular(20)),
                 child: Column(children: [
                   Icon(Icons.timeline_rounded, color: colors.primary, size: 28),
@@ -940,8 +940,8 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                                 colors: [
-                                  colors.primary.withValues(alpha: 0.20),
-                                  colors.primary.withValues(alpha: 0.01),
+                                  colors.primary.withOpacity(0.20),
+                                  colors.primary.withOpacity(0.01),
                                 ],
                               )),
                         )
@@ -1010,9 +1010,9 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
   Widget _lightBadge(String label, IconData icon) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.14),
+          color: Colors.white.withOpacity(0.14),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+          border: Border.all(color: Colors.white.withOpacity(0.14)),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(icon, size: 16, color: Colors.white),
@@ -1037,13 +1037,13 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: active
-              ? colors.primary.withValues(alpha: 0.12)
-              : colors.surfaceContainerLowest.withValues(alpha: 0.72),
+              ? colors.primary.withOpacity(0.12)
+              : colors.surfaceContainerLowest.withOpacity(0.72),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: active
-                ? colors.primary.withValues(alpha: 0.28)
-                : colors.outlineVariant.withValues(alpha: 0.60),
+                ? colors.primary.withOpacity(0.28)
+                : colors.outlineVariant.withOpacity(0.60),
           ),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -1085,7 +1085,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
           color: colors.surfaceContainerLow,
           borderRadius: BorderRadius.circular(20),
           border:
-              Border.all(color: colors.outlineVariant.withValues(alpha: 0.55)),
+              Border.all(color: colors.outlineVariant.withOpacity(0.55)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
@@ -1146,10 +1146,10 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
             color: colors.surfaceContainerLowest,
             borderRadius: BorderRadius.circular(28),
             border: Border.all(
-                color: colors.outlineVariant.withValues(alpha: 0.62)),
+                color: colors.outlineVariant.withOpacity(0.62)),
             boxShadow: [
               BoxShadow(
-                color: colors.primary.withValues(alpha: 0.055),
+                color: colors.primary.withOpacity(0.055),
                 blurRadius: 24,
                 offset: const Offset(0, 8),
               ),

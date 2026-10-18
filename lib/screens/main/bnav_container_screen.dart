@@ -127,7 +127,7 @@ class _BnavContainerScreenState extends State<BnavContainerScreen>
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: colors.primary.withValues(alpha: dark ? 0.08 : 0.10),
+                    color: colors.primary.withOpacity(dark ? 0.08 : 0.10),
                     blurRadius: 28,
                     offset: const Offset(0, 8),
                   ),
@@ -138,7 +138,7 @@ class _BnavContainerScreenState extends State<BnavContainerScreen>
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(28),
                   side: BorderSide(
-                      color: colors.outlineVariant.withValues(alpha: 0.6)),
+                      color: colors.outlineVariant.withOpacity(0.6)),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Padding(
@@ -161,9 +161,9 @@ class _BnavContainerScreenState extends State<BnavContainerScreen>
                               onTap: () => _selectDestination(index),
                               borderRadius: BorderRadius.circular(20),
                               splashColor:
-                                  colors.primary.withValues(alpha: 0.12),
+                                  colors.primary.withOpacity(0.12),
                               focusColor:
-                                  colors.primary.withValues(alpha: 0.16),
+                                  colors.primary.withOpacity(0.16),
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 4, vertical: 8),

@@ -14,12 +14,18 @@ class GoogleLoginException implements Exception {
   final String message;
 }
 
+const String _defaultWebClientId =
+    '782284226334-30ok042m0rvu07fmr4otsh7u082br0ru.apps.googleusercontent.com';
+
 /// Exchanges Google's identity token for the same app session as password login.
 class GoogleAuthService {
   GoogleAuthService({
     Dio? client,
     GoogleSignIn? googleSignIn,
-    this.webClientId = const String.fromEnvironment('GOOGLE_WEB_CLIENT_ID'),
+    this.webClientId = const String.fromEnvironment(
+      'GOOGLE_WEB_CLIENT_ID',
+      defaultValue: _defaultWebClientId,
+    ),
     this.iosClientId = const String.fromEnvironment('GOOGLE_IOS_CLIENT_ID'),
   })  : _client = client ??
             Dio(BaseOptions(
@@ -92,18 +98,40 @@ class GoogleAuthService {
     } on PlatformException catch (error) {
       if (error.code == GoogleSignIn.kSignInCanceledError) return false;
       // Do not log credentials or the HTTP request containing Google's token.
-      developer.log('Google sign-in failed: ${error.code}',
-          name: 'GoogleAuthService');
-      throw GoogleLoginException(
-        error.code == GoogleSignIn.kNetworkError
-            ? 'Tidak dapat terhubung ke Google. Periksa koneksi internet Anda.'
-            : 'Tidak dapat masuk dengan Google. Silakan coba lagi atau gunakan username dan password.',
+      developer.log(
+        'Google sign-in failed: ${error.code} (${error.message})',
+        name: 'GoogleAuthService',
+      );
+      if (kDebugMode) {
+        debugPrint(
+          '[GoogleAuthService] Google sign-in failed: code=${error.code}, message=${error.message}',
+        );
+      }
+      final msg = error.message ?? '';
+      if (error.code == GoogleSignIn.kNetworkError || msg.contains('7:')) {
+        throw const GoogleLoginException(
+          'Tidak dapat terhubung ke Google. Periksa koneksi internet Anda.',
+        );
+      }
+      if (msg.contains('ApiException: 10:') ||
+          msg.contains('DEVELOPER_ERROR')) {
+        throw const GoogleLoginException(
+          'Konfigurasi OAuth Android (SHA-1 / Package Name) belum sesuai di Google Cloud Console.',
+        );
+      }
+      throw const GoogleLoginException(
+        'Tidak dapat masuk dengan Google. Silakan coba lagi atau gunakan username dan password.',
       );
     } on DioException catch (error) {
-      developer.log(
-          'Google token exchange failed: ${error.type.name}, status ${error.response?.statusCode}',
-          name: 'GoogleAuthService');
       final status = error.response?.statusCode;
+      developer.log(
+          'Google token exchange failed: ${error.type.name}, status $status',
+          name: 'GoogleAuthService');
+      if (kDebugMode) {
+        debugPrint(
+          '[GoogleAuthService] Google token exchange failed: type=${error.type.name}, status=$status',
+        );
+      }
       if (status == 401 || status == 403) {
         throw const GoogleLoginException(
             'Akun Google belum dapat diverifikasi. Silakan masuk kembali.');

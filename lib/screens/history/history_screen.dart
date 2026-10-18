@@ -153,7 +153,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     const SizedBox(height: 12),
                                     DropdownButtonFormField<String>(
                                       key: ValueKey(_serial),
-                                      initialValue: _serial,
+                                      value: _serial,
                                       isExpanded: true,
                                       decoration: InputDecoration(
                                           labelText: 'Perangkat',
@@ -451,7 +451,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 belowBarData: BarAreaData(
                                     show: true,
                                     color:
-                                        colors.primary.withValues(alpha: 0.10)))
+                                        colors.primary.withOpacity(0.10)))
                           ],
                         ),
                         duration: MediaQuery.disableAnimationsOf(context)
@@ -490,7 +490,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             color: colors.surfaceContainerLowest,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-                color: colors.outlineVariant.withValues(alpha: 0.7))),
+                color: colors.outlineVariant.withOpacity(0.7))),
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text(

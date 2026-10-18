@@ -1,11 +1,15 @@
 import 'dart:developer' as developer;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'widgets/google_sign_in_button.dart';
 import 'widgets/water_backdrop.dart';
 import '../../constants/api.dart';
+import '../../services/google_auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  const RegisterScreen({super.key, this.googleAuthService});
+
+  final GoogleAuthService? googleAuthService;
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -18,8 +22,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
 
   bool isLoading = false;
+  bool _isGoogleLoading = false;
   bool _obscurePassword = true;
   final dio = Dio();
+  late final GoogleAuthService _googleAuthService =
+      widget.googleAuthService ?? GoogleAuthService();
 
   @override
   void dispose() {
@@ -186,6 +193,68 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  Future<void> loginWithGoogle() async {
+    if (isLoading) return;
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      isLoading = true;
+      _isGoogleLoading = true;
+    });
+
+    try {
+      final signedIn = await _googleAuthService.signIn();
+      if (!signedIn || !mounted) return;
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Text("Login Google berhasil!"),
+              ],
+            ),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        Navigator.pushReplacementNamed(context, "/bnav");
+      }
+    } catch (e) {
+      final message = e is GoogleLoginException
+          ? e.message
+          : 'Login Google gagal. Silakan coba lagi.';
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text(message)),
+              ],
+            ),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          _isGoogleLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -266,7 +335,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       boxShadow: [
                                         BoxShadow(
                                             color: colors.primary
-                                                .withValues(alpha: 0.22),
+                                                .withOpacity(0.22),
                                             blurRadius: 16,
                                             offset: const Offset(0, 6))
                                       ],
@@ -370,8 +439,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                           : const Color(0xFFE4EFFA)),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: colors.shadow.withValues(
-                                          alpha: dark ? 0.12 : 0.04),
+                                      color: colors.shadow.withOpacity(dark ? 0.12 : 0.04),
                                       blurRadius: 32,
                                       offset: const Offset(0, 12),
                                     )
@@ -519,8 +587,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                                 : [
                                                     BoxShadow(
                                                         color: colors.primary
-                                                            .withValues(
-                                                                alpha: 0.24),
+                                                            .withOpacity(0.24),
                                                         blurRadius: 16,
                                                         offset:
                                                             const Offset(0, 6))
@@ -574,6 +641,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                               ],
                                             ),
                                           ),
+                                        ),
+                                        const SizedBox(height: 20),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                                child: Divider(
+                                                    color: dark
+                                                        ? colors.outlineVariant
+                                                        : const Color(
+                                                            0xFFDCEBFA))),
+                                            Flexible(
+                                              flex: 3,
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 16),
+                                                child: Text('atau',
+                                                    textAlign: TextAlign.center,
+                                                    style: TextStyle(
+                                                        color: colors
+                                                            .onSurfaceVariant,
+                                                        fontSize: 12)),
+                                              ),
+                                            ),
+                                            Expanded(
+                                                child: Divider(
+                                                    color: dark
+                                                        ? colors.outlineVariant
+                                                        : const Color(
+                                                            0xFFDCEBFA))),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 20),
+                                        GoogleSignInButton(
+                                          isLoading: _isGoogleLoading,
+                                          onPressed: isLoading
+                                              ? null
+                                              : loginWithGoogle,
                                         ),
                                       ],
                                     ),

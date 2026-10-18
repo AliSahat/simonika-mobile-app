@@ -43,7 +43,7 @@ class _AnimatedWaterTankState extends State<AnimatedWaterTank>
   void _updateMotion() {
     if (MediaQuery.disableAnimationsOf(context) ||
         widget.level == null ||
-        !TickerMode.valuesOf(context).enabled) {
+        !TickerMode.of(context)) {
       _waves.stop();
     } else if (!_waves.isAnimating) {
       _waves.repeat();
@@ -131,8 +131,8 @@ class _TankPainter extends CustomPainter {
                 end: Alignment.bottomCenter,
                 colors: layer == 0
                     ? [
-                        const Color(0xFF6ED7FF).withValues(alpha: 0.65),
-                        const Color(0xFF48AFFF).withValues(alpha: 0.45)
+                        const Color(0xFF6ED7FF).withOpacity(0.65),
+                        const Color(0xFF48AFFF).withOpacity(0.45)
                       ]
                     : const [
                         Color(0xFF25BAF6),
@@ -151,7 +151,7 @@ class _TankPainter extends CustomPainter {
                 rect.left + 24 + math.sin(i + progress * math.pi * 2) * 9, y),
             2 + i % 3.0,
             Paint()
-              ..color = Colors.white.withValues(alpha: (1 - progress) * 0.4));
+              ..color = Colors.white.withOpacity((1 - progress) * 0.4));
       }
     }
     canvas.restore();
@@ -191,7 +191,7 @@ class _TankPainter extends CustomPainter {
             Offset(x, y),
             Offset(math.min(x + 5, rect.right - 8), y),
             Paint()
-              ..color = color.withValues(alpha: 0.75)
+              ..color = color.withOpacity(0.75)
               ..strokeWidth = 1.3);
       }
       canvas.drawCircle(Offset(rect.right + 6, y), 3, Paint()..color = color);
@@ -219,13 +219,13 @@ class _TankPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2
-          ..color = colors.primary.withValues(alpha: 0.3));
+          ..color = colors.primary.withOpacity(0.3));
     canvas.drawRRect(
         tank.deflate(5),
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2
-          ..color = colors.surfaceContainerLowest.withValues(alpha: 0.8));
+          ..color = colors.surfaceContainerLowest.withOpacity(0.8));
     for (var i = 1; i < 10; i++) {
       final y = rect.bottom - rect.height * i / 10;
       canvas.drawLine(
@@ -234,7 +234,7 @@ class _TankPainter extends CustomPainter {
           Paint()
             ..strokeWidth = 2
             ..strokeCap = StrokeCap.round
-            ..color = colors.onSurface.withValues(alpha: 0.35));
+            ..color = colors.onSurface.withOpacity(0.35));
     }
     canvas.drawLine(
         Offset(rect.left + 14, rect.top + 30),
@@ -242,7 +242,7 @@ class _TankPainter extends CustomPainter {
         Paint()
           ..strokeWidth = 4
           ..strokeCap = StrokeCap.round
-          ..color = Colors.white.withValues(alpha: 0.5));
+          ..color = Colors.white.withOpacity(0.5));
   }
 
   void _pipe(Canvas canvas, Path path, bool active, Color color) {
@@ -262,7 +262,7 @@ class _TankPainter extends CustomPainter {
           ..strokeJoin = StrokeJoin.round
           ..strokeCap = StrokeCap.round
           ..color = active
-              ? color.withValues(alpha: 0.4)
+              ? color.withOpacity(0.4)
               : colors.surfaceContainerHighest);
     if (active) {
       for (final metric in path.computeMetrics()) {

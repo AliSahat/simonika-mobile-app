@@ -370,7 +370,7 @@ class _StartButton extends StatelessWidget {
         borderRadius: radius,
         boxShadow: [
           BoxShadow(
-            color: _Palette.brand.withValues(alpha: 0.28),
+            color: _Palette.brand.withOpacity(0.28),
             blurRadius: 24,
             offset: const Offset(0, 10),
             spreadRadius: -6,
@@ -424,7 +424,7 @@ class _StartButton extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white.withValues(alpha: 0.8),
+                          color: Colors.white.withOpacity(0.8),
                           fontFeatures: const [ui.FontFeature.tabularFigures()],
                         ),
                       )
@@ -456,8 +456,8 @@ class _AmbientPainter extends CustomPainter {
         r,
         Paint()
           ..shader = ui.Gradient.radial(c, r, [
-            color.withValues(alpha: (a * intensity).clamp(0.0, 1.0)),
-            color.withValues(alpha: 0),
+            color.withOpacity((a * intensity).clamp(0.0, 1.0)),
+            color.withOpacity(0),
           ]),
       );
     }
@@ -547,7 +547,7 @@ class _GaugeOrbPainter extends CustomPainter {
       c.translate(0, 10),
       discR,
       Paint()
-        ..color = _Palette.brand.withValues(alpha: dark ? 0.35 : 0.16)
+        ..color = _Palette.brand.withOpacity(dark ? 0.35 : 0.16)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18),
     );
     canvas.drawCircle(c, discR, Paint()..color = surface);
@@ -575,7 +575,7 @@ class _GaugeOrbPainter extends CustomPainter {
     canvas.clipPath(Path()..addOval(waterRect));
     canvas.drawPath(
       wave(math.pi * 0.8, amp * 0.8).shift(const Offset(0, -4)),
-      Paint()..color = _Palette.brandLight.withValues(alpha: 0.28),
+      Paint()..color = _Palette.brandLight.withOpacity(0.28),
     );
     final front = wave(0, amp);
     canvas.drawPath(

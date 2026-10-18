@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,14 +48,16 @@ void main() {
 class _MockHttpClientAdapter implements HttpClientAdapter {
   @override
   Future<ResponseBody> fetch(RequestOptions options, Stream<List<int>>? requestStream, Future<void>? cancelFuture) async {
-    // Wait indefinitely to simulate an ongoing request, but support cancellation
-    final completer = Future<ResponseBody>.delayed(const Duration(hours: 1), () => ResponseBody.fromString('', 200));
-    if (cancelFuture != null) {
-      cancelFuture.then((_) {
-        // Handle cancel
-      });
-    }
-    return completer;
+    final completer = Completer<ResponseBody>();
+    cancelFuture?.then((_) {
+      if (!completer.isCompleted) {
+        completer.completeError(DioException(
+          requestOptions: options,
+          type: DioExceptionType.cancel,
+        ));
+      }
+    });
+    return completer.future;
   }
   
   @override

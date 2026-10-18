@@ -11,8 +11,8 @@ class WaterBackdropPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
     final opacity = dark ? 0.12 : 1.0;
-    final blue = const Color(0xFFBDE4FF).withValues(alpha: opacity);
-    final pale = const Color(0xFFE7F5FF).withValues(alpha: opacity);
+    final blue = const Color(0xFFBDE4FF).withOpacity(opacity);
+    final pale = const Color(0xFFE7F5FF).withOpacity(opacity);
     final header = (h * 0.27).clamp(150.0, 220.0);
     final sweep = Path()
       ..moveTo(w * 0.55, 0)
@@ -37,7 +37,7 @@ class WaterBackdropPainter extends CustomPainter {
             ..shader = ui.Gradient.linear(
               Offset(0, y),
               Offset(w, y + 30),
-              [i == 1 ? blue : pale, blue.withValues(alpha: opacity * 0.15)],
+              [i == 1 ? blue : pale, blue.withOpacity(opacity * 0.15)],
             ));
     }
     final bottom = Path()
@@ -54,7 +54,7 @@ class WaterBackdropPainter extends CustomPainter {
       ..lineTo(0, h)
       ..close();
     canvas.drawPath(
-        bottomRipple, Paint()..color = blue.withValues(alpha: opacity * 0.45));
+        bottomRipple, Paint()..color = blue.withOpacity(opacity * 0.45));
     final dropHeight = (w * 0.30).clamp(85.0, 125.0);
     _drop(canvas, Offset(w - dropHeight * 0.65, header - dropHeight - 8),
         dropHeight, opacity);
@@ -74,7 +74,7 @@ class WaterBackdropPainter extends CustomPainter {
           width, height * 0.51, width * 0.58, height * 0.24, width * 0.5, 0)
       ..close();
     canvas.drawShadow(path,
-        const Color(0xFF389CD5).withValues(alpha: opacity * 0.4), 8, true);
+        const Color(0xFF389CD5).withOpacity(opacity * 0.4), 8, true);
     canvas.drawPath(
         path,
         Paint()
@@ -82,10 +82,10 @@ class WaterBackdropPainter extends CustomPainter {
             Offset.zero,
             Offset(width, height),
             [
-              Colors.white.withValues(alpha: opacity),
-              const Color(0xFFA1DDFF).withValues(alpha: opacity),
-              const Color(0xFF4AABE9).withValues(alpha: opacity),
-              const Color(0xFFD8F3FF).withValues(alpha: opacity)
+              Colors.white.withOpacity(opacity),
+              const Color(0xFFA1DDFF).withOpacity(opacity),
+              const Color(0xFF4AABE9).withOpacity(opacity),
+              const Color(0xFFD8F3FF).withOpacity(opacity)
             ],
             [0, 0.35, 0.72, 1],
           ));
@@ -94,7 +94,7 @@ class WaterBackdropPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1
-          ..color = Colors.white.withValues(alpha: opacity * 0.8));
+          ..color = Colors.white.withOpacity(opacity * 0.8));
     final highlight = Path()
       ..moveTo(width * 0.46, height * 0.12)
       ..cubicTo(width * 0.38, height * 0.35, width * 0.12, height * 0.54,
@@ -105,7 +105,7 @@ class WaterBackdropPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = height * 0.045
           ..strokeCap = StrokeCap.round
-          ..color = Colors.white.withValues(alpha: opacity * 0.9));
+          ..color = Colors.white.withOpacity(opacity * 0.9));
     canvas.restore();
   }
 

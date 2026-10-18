@@ -295,7 +295,7 @@ class _PoolScreenState extends State<PoolScreen> {
                                 boxShadow: [
                                   BoxShadow(
                                       color: colors.primary
-                                          .withValues(alpha: 0.16),
+                                          .withOpacity(0.16),
                                       blurRadius: 24,
                                       offset: const Offset(0, 8))
                                 ],
@@ -606,10 +606,10 @@ class _PoolScreenState extends State<PoolScreen> {
           color: colors.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(22),
           border:
-              Border.all(color: colors.outlineVariant.withValues(alpha: 0.7)),
+              Border.all(color: colors.outlineVariant.withOpacity(0.7)),
           boxShadow: [
             BoxShadow(
-                color: colors.shadow.withValues(alpha: 0.035),
+                color: colors.shadow.withOpacity(0.035),
                 blurRadius: 20,
                 offset: const Offset(0, 6))
           ]),
@@ -728,7 +728,7 @@ class _PoolScreenState extends State<PoolScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: colors.errorContainer.withValues(alpha: 0.75),
+              color: colors.errorContainer.withOpacity(0.75),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(children: [

@@ -30,7 +30,6 @@ void main() {
             label: 'Riwayat',
             isButton: true,
             isSelected: true,
-            hasSelectedState: true,
             hasTapAction: true));
   });
 

@@ -216,13 +216,13 @@ class _NotifScreenState extends State<NotifScreen> {
     return Material(
       color: item.isRead
           ? colors.surfaceContainerLowest
-          : colors.primaryContainer.withValues(alpha: 0.3),
+          : colors.primaryContainer.withOpacity(0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
             color: item.isRead
                 ? colors.outlineVariant
-                : colors.primary.withValues(alpha: 0.4)),
+                : colors.primary.withOpacity(0.4)),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(

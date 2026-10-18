@@ -38,7 +38,7 @@ class GoogleSignInButton extends StatelessWidget {
           disabledBackgroundColor:
               isLoading ? background : colors.surfaceContainerHighest,
           disabledForegroundColor:
-              isLoading ? foreground : colors.onSurface.withValues(alpha: 0.38),
+              isLoading ? foreground : colors.onSurface.withOpacity(0.38),
           overlayColor: foreground,
           textStyle: theme.textTheme.labelLarge?.copyWith(
             fontSize: 15,
