@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Editable fields for the water-control configuration documented by the API.
 class PoolConfigurationControllers {
   final namaWadah = TextEditingController();
   final serial = TextEditingController();
