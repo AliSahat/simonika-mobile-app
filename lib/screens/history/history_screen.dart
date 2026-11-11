@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../constants/api.dart';
+import '../../models/pool_configuration.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key, this.client});
@@ -58,9 +59,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               options: Options(headers: {'Authorization': 'Bearer $token'}));
       if (response.data['success'] != true)
         throw StateError('Data tidak tersedia');
-      final entries = (response.data['data'] as List)
-          .map((item) => Map<String, dynamic>.from(item))
-          .toList();
+      final entries = TelemetryLog.extractTelemetryList(response.data);
       entries.sort((a, b) => (_time(b)?.millisecondsSinceEpoch ?? 0)
           .compareTo(_time(a)?.millisecondsSinceEpoch ?? 0));
       if (mounted)

@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/api.dart';
+import '../../models/pool_configuration.dart';
 import 'widgets/animated_water_tank.dart';
 
 class DetailPoolScreen extends StatefulWidget {
@@ -108,8 +109,17 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
       if (response.data['success'] != true)
         throw StateError('Data tidak tersedia');
       if (mounted) {
-        setState(
-            () => poolData = Map<String, dynamic>.from(response.data['data']));
+        final normalizedPool = ContainerConfig.normalizePoolMap(
+            Map<String, dynamic>.from(response.data['data']));
+        setState(() {
+          poolData = normalizedPool;
+          if (latestWaterData == null &&
+              normalizedPool['last_status'] is Map) {
+            latestWaterData = TelemetryLog.normalizeTelemetryMap(
+                Map<String, dynamic>.from(
+                    normalizedPool['last_status'] as Map));
+          }
+        });
         if (MediaQuery.disableAnimationsOf(context)) {
           _entranceController.value = 1;
         } else {
@@ -137,13 +147,18 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
           options: await _authOptions());
       if (response.data['success'] != true)
         throw StateError('Data tidak tersedia');
-      final items = response.data['data'] as List;
+      final items = TelemetryLog.extractTelemetryList(response.data);
       if (mounted &&
           generation == _waterRequestGeneration &&
           requestedPoolId == _poolId)
         setState(() {
-          latestWaterData =
-              items.isEmpty ? null : Map<String, dynamic>.from(items.first);
+          latestWaterData = items.isEmpty
+              ? (poolData?['last_status'] is Map
+                  ? TelemetryLog.normalizeTelemetryMap(
+                      Map<String, dynamic>.from(
+                          poolData!['last_status'] as Map))
+                  : null)
+              : items.first;
           _waterError = null;
           final level = _level;
           final time = DateTime.tryParse('${latestWaterData?['createdAt']}');
@@ -177,23 +192,48 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
 
   double? _number(dynamic value) =>
       value is num ? value.toDouble() : double.tryParse('$value');
-  double? get _level => _number(latestWaterData?['waterLevel']);
+  bool get _sensorValid =>
+      (latestWaterData?['sensorValid'] ?? latestWaterData?['sensor_valid']) !=
+      false;
+  double? get _level => _sensorValid
+      ? _number(
+          latestWaterData?['waterLevel'] ?? latestWaterData?['water_level'])
+      : null;
+  double? get _distance => _sensorValid
+      ? _number(
+          latestWaterData?['distance'] ?? latestWaterData?['sensor_distance'])
+      : null;
+  bool? get _inletValveOpen {
+    final val =
+        latestWaterData?['fillValveOpen'] ?? latestWaterData?['inlet_valve'];
+    return val is bool ? val : null;
+  }
+
+  bool? get _outletValveOpen {
+    final val =
+        latestWaterData?['drainValveOpen'] ?? latestWaterData?['outlet_valve'];
+    return val is bool ? val : null;
+  }
+
   double? get _tankDepth {
-    final depth = _number(poolData?['kedalaman']);
+    final depth = _number(poolData?['kedalaman'] ?? poolData?['max_depth']);
     return depth != null && depth.isFinite && depth > 0 ? depth : null;
   }
 
   String _value(dynamic value, String unit) =>
       value == null ? '—' : '$value $unit';
-  String get _controlState =>
-      latestWaterData?['controlState']?.toString().trim().isNotEmpty == true
-          ? latestWaterData!['controlState'].toString()
-          : 'Belum diketahui';
+  String get _controlState {
+    final raw =
+        latestWaterData?['controlState'] ?? latestWaterData?['system_state'];
+    return raw?.toString().trim().isNotEmpty == true
+        ? raw.toString()
+        : 'Belum diketahui';
+  }
 
   String get _valveState {
     if (latestWaterData == null) return 'Belum diketahui';
-    final fillValue = latestWaterData!['fillValveOpen'];
-    final drainValue = latestWaterData!['drainValveOpen'];
+    final fillValue = _inletValveOpen;
+    final drainValue = _outletValveOpen;
     if (fillValue is! bool || drainValue is! bool) return 'Belum diketahui';
     final fill = fillValue;
     final drain = drainValue;
@@ -594,8 +634,8 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
           level: _level,
           depth: depth,
           colors: colors,
-          inletActive: latestWaterData?['fillValveOpen'] == true,
-          outletActive: latestWaterData?['drainValveOpen'] == true,
+          inletActive: _inletValveOpen == true,
+          outletActive: _outletValveOpen == true,
           thresholds: _tankThresholds,
         ),
       ),
@@ -645,8 +685,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
     final details = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _metric('Jarak sensor ke air',
-            _value(latestWaterData?['distance'], 'cm'), colors,
+        _metric('Jarak sensor ke air', _value(_distance, 'cm'), colors,
             icon: Icons.straighten_rounded),
         const SizedBox(height: 12),
         _flowSummary(colors),
@@ -715,8 +754,8 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
   }
 
   Widget _flowSummary(ColorScheme colors) {
-    final fillValue = latestWaterData?['fillValveOpen'];
-    final drainValue = latestWaterData?['drainValveOpen'];
+    final fillValue = _inletValveOpen;
+    final drainValue = _outletValveOpen;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

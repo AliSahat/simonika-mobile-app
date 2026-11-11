@@ -71,7 +71,8 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
       if (response.data is! Map || response.data['data'] is! Map) {
         throw const FormatException('Envelope detail wadah tidak dikenali');
       }
-      final data = Map<String, dynamic>.from(response.data['data']);
+      final data = ContainerConfig.normalizePoolMap(
+          Map<String, dynamic>.from(response.data['data']));
       if (!mounted) return;
       fields.load(data);
       setState(() {
@@ -128,9 +129,10 @@ class _UpdatePoolScreenState extends State<UpdatePoolScreen> {
       if (error is DioException && error.type == DioExceptionType.cancel) return;
       debugPrint('Error update pool: $error');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content:
-                Text('Konfigurasi belum dapat disimpan. Silakan coba lagi.')));
+        final backendMessage = extractBackendErrorMessage(error);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(backendMessage ??
+                'Konfigurasi belum dapat disimpan. Silakan coba lagi.')));
       }
     } finally {
       if (mounted) setState(() => _saving = false);

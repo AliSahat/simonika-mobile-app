@@ -47,9 +47,10 @@ class _CreatePoolScreenState extends State<CreatePoolScreen> {
     } catch (error) {
       debugPrint('Error create pool: $error');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content:
-              Text('Konfigurasi belum dapat disimpan. Silakan coba lagi.')));
+      final backendMessage = extractBackendErrorMessage(error);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(backendMessage ??
+              'Konfigurasi belum dapat disimpan. Silakan coba lagi.')));
     } finally {
       if (mounted) setState(() => isLoading = false);
     }

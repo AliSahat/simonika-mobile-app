@@ -1,3 +1,5 @@
+import 'pool_configuration.dart';
+
 enum WaterAlertKind { low, high, stale }
 
 class WaterAlert {
@@ -60,7 +62,11 @@ class WaterAlertDetector {
   final Map<String, Map<String, dynamic>> states = {};
 
   List<WaterAlert> evaluate(
-      Map<String, dynamic> pool, Map<String, dynamic>? reading, DateTime now) {
+      Map<String, dynamic> rawPool, Map<String, dynamic>? rawReading, DateTime now) {
+    final pool = ContainerConfig.normalizePoolMap(rawPool);
+    final reading = rawReading == null
+        ? null
+        : TelemetryLog.normalizeTelemetryMap(rawReading);
     final id = pool['_id']?.toString();
     if (id == null || id.isEmpty || pool['isActive'] == false) return [];
     final state = states.putIfAbsent(id, () => {});
@@ -96,6 +102,7 @@ class WaterAlertDetector {
     }
     state['stale'] = stale;
     if (stale || time == null) return alerts;
+    if (reading?['sensorValid'] == false) return alerts;
 
     final level = _number(reading?['waterLevel']);
     final low = _number(pool['batasIsiMulai']);

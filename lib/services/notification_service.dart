@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/api.dart';
+import '../models/pool_configuration.dart';
 import '../models/water_alert.dart';
 
 class NotificationService extends ChangeNotifier {
@@ -131,7 +132,8 @@ class NotificationService extends ChangeNotifier {
         throw StateError('Invalid pool response');
       }
       final pools = (response.data['data'] as List)
-          .map((pool) => Map<String, dynamic>.from(pool as Map))
+          .map((pool) => ContainerConfig.normalizePoolMap(
+              Map<String, dynamic>.from(pool as Map)))
           .toList();
       final readingsByPool =
           <({Map<String, dynamic> pool, Map<String, dynamic>? reading})>[];
@@ -146,13 +148,16 @@ class NotificationService extends ChangeNotifier {
                 options: options,
                 cancelToken: cancel);
             if (!valid()) return;
-            if (water.data['success'] != true || water.data['data'] is! List) {
+            if (water.data['success'] != true) {
               throw StateError('Invalid sensor response');
             }
-            final readings = water.data['data'] as List;
+            final readings = TelemetryLog.extractTelemetryList(water.data);
             final reading = readings.isEmpty
-                ? null
-                : Map<String, dynamic>.from(readings.first as Map);
+                ? (pool['last_status'] is Map
+                    ? TelemetryLog.normalizeTelemetryMap(
+                        Map<String, dynamic>.from(pool['last_status'] as Map))
+                    : null)
+                : readings.first;
             readingsByPool.add((pool: pool, reading: reading));
           } on DioException catch (exception) {
             if (exception.response?.statusCode == 401) rethrow;

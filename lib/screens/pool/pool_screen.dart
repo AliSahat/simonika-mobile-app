@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/api.dart';
+import '../../models/pool_configuration.dart';
 import '../../widgets/notification_button.dart';
 
 class PoolScreen extends StatefulWidget {
@@ -55,7 +56,13 @@ class _PoolScreenState extends State<PoolScreen> {
       );
       if (mounted)
         setState(() {
-          pools = response.data['data'];
+          final rawList = response.data['data'] as List? ?? [];
+          pools = rawList
+              .map((item) => item is Map
+                  ? ContainerConfig.normalizePoolMap(
+                      Map<String, dynamic>.from(item))
+                  : item)
+              .toList();
         });
     } catch (e) {
       debugPrint('Error fetch pool: $e');
@@ -582,7 +589,10 @@ class _PoolScreenState extends State<PoolScreen> {
     );
   }
 
-  Widget _poolCard(dynamic pool, ColorScheme colors) {
+  Widget _poolCard(dynamic rawPool, ColorScheme colors) {
+    final pool = rawPool is Map
+        ? ContainerConfig.normalizePoolMap(Map<String, dynamic>.from(rawPool))
+        : rawPool;
     final active = pool['isActive'] == true;
     final modeAuto = pool['modeAuto'] is bool ? pool['modeAuto'] as bool : null;
     final id = '${pool['_id'] ?? ''}';

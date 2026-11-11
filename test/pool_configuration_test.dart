@@ -30,14 +30,58 @@ void main() {
   });
 
   test('rejects invalid threshold ordering and values above depth', () {
+    fields.batasIsiMulai.text = '0';
+    expect(validator.isiMulai(fields.batasIsiMulai.text), isNotNull);
+    fields.batasIsiMulai.text = '20';
+
     fields.batasBuangBerhenti.text = '20';
     expect(validator.isiMulai(fields.batasIsiMulai.text), isNotNull);
     expect(validator.buangBerhenti(fields.batasBuangBerhenti.text), isNotNull);
 
     fields.batasBuangBerhenti.text = '40';
-    fields.batasBuangMulai.text = '121';
+    fields.batasBuangMulai.text = '120';
     expect(validator.kedalaman(fields.kedalaman.text), isNotNull);
     expect(validator.buangMulai(fields.batasBuangMulai.text), isNotNull);
+
+    fields.batasBuangMulai.text = '100';
+    fields.jarakSensorDasar.text = '119';
+    expect(validator.kedalaman(fields.kedalaman.text), isNotNull);
+    expect(validator.jarakSensor(fields.jarakSensorDasar.text), isNotNull);
+  });
+
+  test('supports dual-mapping snake_case and camelCase fields', () {
+    fields.load({
+      'namaWadah': 'Tangki snake',
+      'serial': 'DEV-01',
+      'max_depth': 150,
+      'sensor_to_bottom': 160,
+      'fill_start': 25,
+      'drain_stop': 45,
+      'fill_stop': 85,
+      'drain_start': 110,
+      'mode_auto': true,
+    });
+    expect(fields.kedalaman.text, '150');
+    expect(fields.jarakSensorDasar.text, '160');
+    expect(fields.batasIsiMulai.text, '25');
+    expect(fields.batasBuangBerhenti.text, '45');
+    expect(fields.batasIsiBerhenti.text, '85');
+    expect(fields.batasBuangMulai.text, '110');
+
+    final telemetry = TelemetryLog.fromJson({
+      'water_level': 65.5,
+      'sensor_distance': 54.5,
+      'inlet_valve': true,
+      'outlet_valve': false,
+      'system_state': 'FILLING',
+      'sensor_valid': true,
+    });
+    expect(telemetry.waterLevel, 65.5);
+    expect(telemetry.distance, 54.5);
+    expect(telemetry.fillValveOpen, isTrue);
+    expect(telemetry.drainValveOpen, isFalse);
+    expect(telemetry.controlState, 'FILLING');
+    expect(telemetry.sensorValid, isTrue);
   });
 
   test('payload contains only API configuration fields', () {
