@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../services/notification_service.dart';
 import '../pool/pool_screen.dart';
@@ -60,7 +61,6 @@ class _BnavContainerScreenState extends State<BnavContainerScreen>
   }
 
   int _selectedIndex = 0;
-  // Build destinations on first visit, keeping their state on subsequent visits.
   final List<Widget?> _screens = [const PoolScreen(), null, null];
 
   static const _destinations = [
@@ -95,125 +95,229 @@ class _BnavContainerScreenState extends State<BnavContainerScreen>
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final colors = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF0878DE),
-      brightness: dark ? Brightness.dark : Brightness.light,
-    );
     final duration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : const Duration(milliseconds: 200);
 
     return Scaffold(
-      backgroundColor: dark ? colors.surface : const Color(0xFFF7FBFF),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: List.generate(_screens.length, (index) {
-          return TickerMode(
-            enabled: index == _selectedIndex,
-            child: _screens[index] ?? const SizedBox.shrink(),
-          );
-        }),
+      backgroundColor: const Color(0xFF060911),
+      extendBody: true,
+      body: Stack(
+        children: [
+          IgnorePointer(
+            child: Stack(
+              children: [
+                Positioned(
+                  top: -60,
+                  right: -40,
+                  child: ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
+                    child: Container(
+                      width: 220,
+                      height: 220,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFFF59E0B).withOpacity(0.32),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 240,
+                  left: -70,
+                  child: ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                    child: Container(
+                      width: 260,
+                      height: 260,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF2563EB).withOpacity(0.28),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 120,
+                  left: 80,
+                  child: ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
+                    child: Container(
+                      width: 220,
+                      height: 220,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF10B981).withOpacity(0.22),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: -40,
+                  right: -40,
+                  child: ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
+                    child: Container(
+                      width: 240,
+                      height: 240,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF06B6D4).withOpacity(0.26),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IndexedStack(
+            index: _selectedIndex,
+            children: List.generate(_screens.length, (index) {
+              return TickerMode(
+                enabled: index == _selectedIndex,
+                child: _screens[index] ?? const SizedBox.shrink(),
+              );
+            }),
+          ),
+        ],
       ),
       bottomNavigationBar: SafeArea(
         top: false,
-        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         child: Align(
           heightFactor: 1,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560),
-            child: DecoratedBox(
+            child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: colors.primary.withOpacity(dark ? 0.08 : 0.10),
-                    blurRadius: 28,
-                    offset: const Offset(0, 8),
+                    color: Colors.black.withOpacity(0.45),
+                    blurRadius: 30,
+                    offset: const Offset(0, 12),
                   ),
                 ],
               ),
-              child: Material(
-                color: colors.surfaceContainerLowest,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
-                  side: BorderSide(
-                      color: colors.outlineVariant.withOpacity(0.6)),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: List.generate(_destinations.length, (index) {
-                      final destination = _destinations[index];
-                      final selected = index == _selectedIndex;
-                      return Expanded(
-                        child: Semantics(
-                          button: true,
-                          selected: selected,
-                          label: destination.label,
-                          onTap: () => _selectDestination(index),
-                          excludeSemantics: true,
-                          child: Tooltip(
-                            message: destination.label,
-                            child: InkWell(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(28),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            const Color(0xFF181F30).withOpacity(0.76),
+                            const Color(0xFF101624).withOpacity(0.66),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.09),
+                          width: 1.0,
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: List.generate(_destinations.length, (index) {
+                          final destination = _destinations[index];
+                          final selected = index == _selectedIndex;
+                          return Expanded(
+                            child: Semantics(
+                              button: true,
+                              selected: selected,
+                              label: destination.label,
                               onTap: () => _selectDestination(index),
-                              borderRadius: BorderRadius.circular(20),
-                              splashColor:
-                                  colors.primary.withOpacity(0.12),
-                              focusColor:
-                                  colors.primary.withOpacity(0.16),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 4, vertical: 8),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    AnimatedContainer(
-                                      duration: duration,
-                                      curve: Curves.easeOutCubic,
-                                      width: 64,
-                                      height: 36,
-                                      decoration: BoxDecoration(
-                                        color: selected
-                                            ? colors.primaryContainer
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      child: Icon(
-                                        selected
-                                            ? destination.activeIcon
-                                            : destination.icon,
-                                        size: 24,
-                                        color: selected
-                                            ? colors.onPrimaryContainer
-                                            : colors.onSurfaceVariant,
-                                      ),
+                              excludeSemantics: true,
+                              child: Tooltip(
+                                message: destination.label,
+                                child: InkWell(
+                                  onTap: () => _selectDestination(index),
+                                  borderRadius: BorderRadius.circular(20),
+                                  splashColor: const Color(0xFF2563EB)
+                                      .withOpacity(0.16),
+                                  focusColor: const Color(0xFF2563EB)
+                                      .withOpacity(0.20),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 8),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        AnimatedContainer(
+                                          duration: duration,
+                                          curve: Curves.easeOutCubic,
+                                          width: 64,
+                                          height: 36,
+                                          decoration: BoxDecoration(
+                                            gradient: selected
+                                                ? const LinearGradient(
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                    colors: [
+                                                      Color(0xFF2563EB),
+                                                      Color(0xFF1D8CF8),
+                                                    ],
+                                                  )
+                                                : null,
+                                            color: selected
+                                                ? null
+                                                : Colors.transparent,
+                                            borderRadius:
+                                                BorderRadius.circular(18),
+                                            boxShadow: selected
+                                                ? [
+                                                    BoxShadow(
+                                                      color: const Color(
+                                                              0xFF2563EB)
+                                                          .withOpacity(0.45),
+                                                      blurRadius: 14,
+                                                      offset:
+                                                          const Offset(0, 4),
+                                                    ),
+                                                  ]
+                                                : null,
+                                          ),
+                                          child: Icon(
+                                            selected
+                                                ? destination.activeIcon
+                                                : destination.icon,
+                                            size: 22,
+                                            color: selected
+                                                ? const Color(0xFFF8FAFC)
+                                                : const Color(0xFF94A3B8),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          destination.label,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            height: 1.3,
+                                            fontWeight: selected
+                                                ? FontWeight.w700
+                                                : FontWeight.w500,
+                                            color: selected
+                                                ? const Color(0xFFF8FAFC)
+                                                : const Color(0xFF94A3B8),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      destination.label,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        height: 1.3,
-                                        fontWeight: selected
-                                            ? FontWeight.w700
-                                            : FontWeight.w500,
-                                        color: selected
-                                            ? colors.primary
-                                            : colors.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ),
-                      );
-                    }),
+                          );
+                        }),
+                      ),
+                    ),
                   ),
                 ),
               ),

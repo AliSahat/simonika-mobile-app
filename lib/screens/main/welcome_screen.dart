@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 /// Brand palette for the welcome experience.
 class _Palette {
   _Palette(bool dark)
-      : bg = dark ? const Color(0xFF0B1220) : const Color(0xFFF8FAFD),
-        surface = dark ? const Color(0xFF131C2E) : Colors.white,
-        ink = dark ? const Color(0xFFF2F6FB) : const Color(0xFF0E1A2B),
-        muted = dark ? const Color(0xFF9AA8BA) : const Color(0xFF5B6B80),
-        hairline = dark ? const Color(0x1FFFFFFF) : const Color(0xFFE6ECF3);
+      : bg = const Color(0xFF060911),
+        surface = const Color(0xFF0B1324),
+        ink = const Color(0xFFF8FAFC),
+        muted = const Color(0xFF94A3B8),
+        hairline = const Color(0x2E60A5FA);
 
   final Color bg;
   final Color surface;
@@ -18,9 +18,9 @@ class _Palette {
   final Color muted;
   final Color hairline;
 
-  static const brand = Color(0xFF0A6CF0);
-  static const brandLight = Color(0xFF3FB4FF);
-  static const brandDeep = Color(0xFF0750C4);
+  static const brand = Color(0xFF2563EB);
+  static const brandLight = Color(0xFF38BDF8);
+  static const brandDeep = Color(0xFF1E40AF);
 }
 
 class WelcomeScreen extends StatefulWidget {
@@ -88,7 +88,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
+    const dark = true;
     final p = _Palette(dark);
 
     return Scaffold(
@@ -103,11 +103,88 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               .transform(((entry - 0.78) / 0.22).clamp(0.0, 1.0));
 
           return Stack(
+            fit: StackFit.expand,
             children: [
               Positioned.fill(
                 child: IgnorePointer(
-                  child: CustomPaint(
-                    painter: _AmbientPainter(dark: dark, intensity: 1 + fill),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        top: -40,
+                        right: -30,
+                        child: ImageFiltered(
+                          imageFilter:
+                              ui.ImageFilter.blur(sigmaX: 90, sigmaY: 90),
+                          child: Container(
+                            width: 220,
+                            height: 220,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color:
+                                  const Color(0xFFF59E0B).withOpacity(0.26),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 200,
+                        left: -60,
+                        child: ImageFiltered(
+                          imageFilter:
+                              ui.ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                          child: Container(
+                            width: 250,
+                            height: 250,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color:
+                                  const Color(0xFF2563EB).withOpacity(0.28),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 90,
+                        left: 50,
+                        child: ImageFiltered(
+                          imageFilter:
+                              ui.ImageFilter.blur(sigmaX: 90, sigmaY: 90),
+                          child: Container(
+                            width: 220,
+                            height: 220,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color:
+                                  const Color(0xFF10B981).withOpacity(0.20),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: -40,
+                        right: -30,
+                        child: ImageFiltered(
+                          imageFilter:
+                              ui.ImageFilter.blur(sigmaX: 90, sigmaY: 90),
+                          child: Container(
+                            width: 230,
+                            height: 230,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color:
+                                  const Color(0xFF06B6D4).withOpacity(0.24),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter:
+                              _AmbientPainter(dark: dark, intensity: 1 + fill),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -158,15 +235,15 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(height: 40),
+                                  const SizedBox(height: 36),
                                   _reveal(
                                     0.25,
                                     0.75,
-                                    Text(
+                                    const Text(
                                       'SISTEM MONITORING & KENDALI AIR',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
-                                        color: _Palette.brand,
+                                        color: Color(0xFF38BDF8),
                                         fontSize: 11,
                                         fontWeight: FontWeight.w700,
                                         letterSpacing: 1.8,
@@ -180,11 +257,13 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                     Semantics(
                                       header: true,
                                       child: Text.rich(
-                                        TextSpan(children: [
-                                          const TextSpan(text: 'Pantau air,\n'),
+                                        const TextSpan(children: [
+                                          TextSpan(text: 'Pantau air,\n'),
                                           TextSpan(
                                             text: 'tenang setiap hari.',
-                                            style: TextStyle(color: p.muted),
+                                            style: TextStyle(
+                                              color: Color(0xFF38BDF8),
+                                            ),
                                           ),
                                         ]),
                                         textAlign: TextAlign.center,
@@ -193,7 +272,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                           fontSize: 32,
                                           height: 1.18,
                                           letterSpacing: -0.9,
-                                          fontWeight: FontWeight.w700,
+                                          fontWeight: FontWeight.w800,
                                         ),
                                       ),
                                     ),
@@ -213,7 +292,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                     ),
                                   ),
                                   const Spacer(),
-                                  const SizedBox(height: 32),
+                                  const SizedBox(height: 28),
                                   _reveal(
                                     0.5,
                                     0.95,
@@ -229,7 +308,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                       onPressed: _handleStartPressed,
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: 10),
                                   _reveal(
                                     0.6,
                                     1.0,
@@ -247,7 +326,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                               : () => Navigator.pushNamed(
                                                   context, '/register'),
                                           style: TextButton.styleFrom(
-                                            foregroundColor: _Palette.brand,
+                                            foregroundColor:
+                                                const Color(0xFF60A5FA),
                                             minimumSize: const Size(48, 48),
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 8),
@@ -255,6 +335,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                           child: const Text(
                                             'Daftar sekarang',
                                             style: TextStyle(
+                                                color: Color(0xFF60A5FA),
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w700),
                                           ),
@@ -286,34 +367,68 @@ class _BrandBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 30,
-          height: 30,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(9),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [_Palette.brandLight, _Palette.brandDeep],
+    return Center(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(999),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF1E3A8A).withOpacity(0.50),
+                  const Color(0xFF0F172A).withOpacity(0.85),
+                ],
+              ),
+              border: Border.all(
+                color: const Color(0xFF60A5FA).withOpacity(0.28),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(9),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [_Palette.brandLight, _Palette.brand],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _Palette.brand.withOpacity(0.45),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.water_drop_rounded,
+                      color: Colors.white, size: 17),
+                ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    'SIMONIKA',
+                    style: TextStyle(
+                      color: palette.ink,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 2.4,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          child: const Icon(Icons.water_drop_rounded,
-              color: Colors.white, size: 17),
         ),
-        const SizedBox(width: 10),
-        Text(
-          'SIMONIKA',
-          style: TextStyle(
-            color: palette.ink,
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 2.4,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -324,22 +439,45 @@ class _FeatureRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget item(IconData icon, String label) => Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: _Palette.brand),
-            const SizedBox(width: 6),
-            Text(label,
-                style: TextStyle(
-                    color: palette.muted,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w500)),
-          ],
+    Widget item(IconData icon, String label) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF1E3A8A).withOpacity(0.42),
+                const Color(0xFF0E7490).withOpacity(0.28),
+                const Color(0xFF0F172A).withOpacity(0.80),
+              ],
+            ),
+            border: Border.all(
+              color: const Color(0xFF60A5FA).withOpacity(0.24),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: const Color(0xFF38BDF8)),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: Color(0xFFE2E8F0),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
 
     return Wrap(
       alignment: WrapAlignment.center,
-      spacing: 20,
+      spacing: 10,
       runSpacing: 10,
       children: [
         item(Icons.bolt_rounded, 'Real-time'),
@@ -370,10 +508,9 @@ class _StartButton extends StatelessWidget {
         borderRadius: radius,
         boxShadow: [
           BoxShadow(
-            color: _Palette.brand.withOpacity(0.28),
+            color: _Palette.brand.withOpacity(0.42),
             blurRadius: 24,
-            offset: const Offset(0, 10),
-            spreadRadius: -6,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -382,7 +519,19 @@ class _StartButton extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(
-              child: Container(color: _Palette.brand),
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF2563EB),
+                      Color(0xFF1D8CF8),
+                      Color(0xFF0EA5E9),
+                    ],
+                  ),
+                ),
+              ),
             ),
             if (isEntering)
               Positioned.fill(
@@ -415,7 +564,7 @@ class _StartButton extends StatelessWidget {
                     const Text('Mulai sekarang',
                         style: TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             letterSpacing: 0.1)),
                     if (isEntering)
                       Text(
@@ -424,7 +573,7 @@ class _StartButton extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withOpacity(0.85),
                           fontFeatures: const [ui.FontFeature.tabularFigures()],
                         ),
                       )
@@ -547,10 +696,27 @@ class _GaugeOrbPainter extends CustomPainter {
       c.translate(0, 10),
       discR,
       Paint()
-        ..color = _Palette.brand.withOpacity(dark ? 0.35 : 0.16)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18),
+        ..color = _Palette.brand.withOpacity(0.38)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22),
     );
-    canvas.drawCircle(c, discR, Paint()..color = surface);
+    canvas.drawCircle(
+      c,
+      discR,
+      Paint()
+        ..shader = ui.Gradient.linear(
+          Offset(c.dx - discR, c.dy - discR),
+          Offset(c.dx + discR, c.dy + discR),
+          const [Color(0xFF17253B), Color(0xFF0B1324)],
+        ),
+    );
+    canvas.drawCircle(
+      c,
+      discR,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..color = const Color(0xFF60A5FA).withOpacity(0.25),
+    );
 
     // Water.
     final waterR = discR - 7;

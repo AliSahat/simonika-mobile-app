@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -111,125 +112,229 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final colors = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF0878DE),
-      brightness: dark ? Brightness.dark : Brightness.light,
+      seedColor: const Color(0xFF2563EB),
+      brightness: Brightness.dark,
     );
     return Theme(
-      data: Theme.of(context).copyWith(colorScheme: colors),
+      data: Theme.of(context).copyWith(
+        brightness: Brightness.dark,
+        colorScheme: colors,
+      ),
       child: Scaffold(
-        backgroundColor: dark ? colors.surface : const Color(0xFFF3F6FA),
-        body: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: Column(
+        backgroundColor: const Color(0xFF060911),
+        extendBody: true,
+        body: Stack(
+          children: [
+            IgnorePointer(
+              child: Stack(
                 children: [
-                  _header(colors),
-                  Expanded(
-                    child: _loading
-                        ? Center(
-                            child: CircularProgressIndicator(
-                                color: colors.primary))
-                        : RefreshIndicator(
-                            onRefresh: _fetchProfile,
-                            child: ListView(
-                              key: const PageStorageKey('profile-list'),
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-                              children: [
-                                if (_error != null) ...[
-                                  _errorCard(colors),
-                                  const SizedBox(height: 24),
-                                ],
-                                if (_name != null || _username != null) ...[
-                                  _identityCard(colors),
-                                  const SizedBox(height: 28),
-                                  _heading(
-                                      'Informasi akun',
-                                      'Detail identitas Anda di SIMONIKA',
-                                      colors),
-                                  const SizedBox(height: 16),
-                                  _surface(
-                                    colors,
-                                    Column(children: [
-                                      _info('Nama lengkap', _displayName,
-                                          Icons.badge_outlined, colors),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 20),
-                                        child: Divider(
-                                            height: 1,
-                                            color: colors.outlineVariant
-                                                .withOpacity(0.6)),
-                                      ),
-                                      _info(
-                                          'Username',
-                                          _username?.trim().isNotEmpty == true
-                                              ? _username!
-                                              : 'Tidak tersedia',
-                                          Icons.alternate_email_rounded,
-                                          colors),
-                                    ]),
-                                  ),
-                                  const SizedBox(height: 28),
-                                ],
-                                _heading(
-                                    'Pengaturan & informasi',
-                                    'Preferensi dan bantuan untuk Anda',
-                                    colors),
-                                const SizedBox(height: 16),
-                                _settingsCard(colors),
-                                const SizedBox(height: 24),
-                                OutlinedButton(
-                                  onPressed: _loggingOut
-                                      ? null
-                                      : () => _logout(colors),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: colors.error,
-                                    backgroundColor: colors.errorContainer
-                                        .withOpacity(dark ? 0.16 : 0.25),
-                                    side: BorderSide(
-                                        color: colors.error
-                                            .withOpacity(0.18)),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 20, vertical: 18),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(20)),
-                                  ),
-                                  child: const Wrap(
-                                    alignment: WrapAlignment.center,
-                                    crossAxisAlignment:
-                                        WrapCrossAlignment.center,
-                                    spacing: 12,
-                                    children: [
-                                      Icon(Icons.logout_rounded, size: 20),
-                                      Text('Keluar dari akun',
-                                          style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w700)),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 28),
-                                Icon(Icons.water_drop_outlined,
-                                    size: 24, color: colors.primary),
-                                const SizedBox(height: 8),
-                                Text('Monitoring air, lebih mudah.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                        color: colors.onSurfaceVariant,
-                                        fontSize: 12)),
-                              ],
-                            ),
-                          ),
+                  Positioned(
+                    top: -50,
+                    right: -30,
+                    child: ImageFiltered(
+                      imageFilter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
+                      child: Container(
+                        width: 220,
+                        height: 220,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFFF59E0B).withOpacity(0.32),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 220,
+                    left: -70,
+                    child: ImageFiltered(
+                      imageFilter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                      child: Container(
+                        width: 250,
+                        height: 250,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFF2563EB).withOpacity(0.28),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 100,
+                    left: 60,
+                    child: ImageFiltered(
+                      imageFilter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
+                      child: Container(
+                        width: 220,
+                        height: 220,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFF10B981).withOpacity(0.22),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: -40,
+                    right: -30,
+                    child: ImageFiltered(
+                      imageFilter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
+                      child: Container(
+                        width: 230,
+                        height: 230,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFF06B6D4).withOpacity(0.26),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
+            SafeArea(
+              bottom: false,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 640),
+                  child: Column(
+                    children: [
+                      _header(colors),
+                      Expanded(
+                        child: _loading
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                    color: Color(0xFF3B82F6)))
+                            : RefreshIndicator(
+                                onRefresh: _fetchProfile,
+                                color: const Color(0xFF3B82F6),
+                                backgroundColor: const Color(0xFF121826),
+                                child: ListView(
+                                  key: const PageStorageKey('profile-list'),
+                                  physics: const BouncingScrollPhysics(
+                                    parent: AlwaysScrollableScrollPhysics(),
+                                  ),
+                                  padding:
+                                      const EdgeInsets.fromLTRB(20, 8, 20, 110),
+                                  children: [
+                                    if (_error != null) ...[
+                                      _errorCard(colors),
+                                      const SizedBox(height: 24),
+                                    ],
+                                    if (_name != null ||
+                                        _username != null) ...[
+                                      _identityCard(colors),
+                                      const SizedBox(height: 24),
+                                      _heading(
+                                          'Informasi akun',
+                                          'Detail identitas Anda di SIMONIKA',
+                                          colors),
+                                      const SizedBox(height: 14),
+                                      _surface(
+                                        colors,
+                                        Column(children: [
+                                          _info(
+                                              'Nama lengkap',
+                                              _displayName,
+                                              Icons.badge_outlined,
+                                              colors,
+                                              accent: const Color(0xFF3B82F6)),
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 18),
+                                            child: Divider(
+                                                height: 1,
+                                                color: Colors.white
+                                                    .withOpacity(0.08)),
+                                          ),
+                                          _info(
+                                              'Username',
+                                              _username?.trim().isNotEmpty ==
+                                                      true
+                                                  ? _username!
+                                                  : 'Tidak tersedia',
+                                              Icons.alternate_email_rounded,
+                                              colors,
+                                              accent: const Color(0xFF06B6D4)),
+                                        ]),
+                                      ),
+                                      const SizedBox(height: 24),
+                                    ],
+                                    _heading(
+                                        'Pengaturan & informasi',
+                                        'Preferensi dan bantuan untuk Anda',
+                                        colors),
+                                    const SizedBox(height: 14),
+                                    _settingsCard(colors),
+                                    const SizedBox(height: 24),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius:
+                                            BorderRadius.circular(999),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(0xFFEF4444)
+                                                .withOpacity(0.18),
+                                            blurRadius: 20,
+                                            offset: const Offset(0, 6),
+                                          ),
+                                        ],
+                                      ),
+                                      child: OutlinedButton(
+                                        onPressed: _loggingOut
+                                            ? null
+                                            : () => _logout(colors),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor:
+                                              const Color(0xFFF87171),
+                                          backgroundColor:
+                                              const Color(0xFFEF4444)
+                                                  .withOpacity(0.14),
+                                          side: BorderSide(
+                                              color: const Color(0xFFF87171)
+                                                  .withOpacity(0.32)),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 20, vertical: 16),
+                                          shape: const StadiumBorder(),
+                                        ),
+                                        child: const Wrap(
+                                          alignment: WrapAlignment.center,
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
+                                          spacing: 10,
+                                          children: [
+                                            Icon(Icons.logout_rounded,
+                                                size: 20,
+                                                color: Color(0xFFF87171)),
+                                            Text('Keluar dari akun',
+                                                style: TextStyle(
+                                                    color: Color(0xFFF87171),
+                                                    fontSize: 15,
+                                                    fontWeight:
+                                                        FontWeight.w700)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 28),
+                                    const Icon(Icons.water_drop_outlined,
+                                        size: 24, color: Color(0xFF38BDF8)),
+                                    const SizedBox(height: 8),
+                                    const Text('Monitoring air, lebih mudah.',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                            color: Color(0xFF94A3B8),
+                                            fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -239,27 +344,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _name?.trim().isNotEmpty == true ? _name!.trim() : 'Pengguna';
 
   Widget _header(ColorScheme colors) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 20, 16),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
         child: Row(children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('RUANG PERSONAL',
-                    style: TextStyle(
-                        color: colors.primary,
-                        fontSize: 12,
-                        letterSpacing: 1.8,
-                        fontWeight: FontWeight.w700)),
+                const Text(
+                  'RUANG PERSONAL',
+                  style: TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 10,
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Semantics(
                   header: true,
-                  child: Text('Profil saya',
-                      style: TextStyle(
-                          color: colors.onSurface,
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.8)),
+                  child: const Text(
+                    'Profil saya',
+                    style: TextStyle(
+                      color: Color(0xFFF8FAFC),
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -269,165 +380,225 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _identityCard(ColorScheme colors) => Container(
         decoration: BoxDecoration(
-          color: colors.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(28),
-          border:
-              Border.all(color: colors.outlineVariant.withOpacity(0.5)),
+          borderRadius: BorderRadius.circular(22),
           boxShadow: [
             BoxShadow(
-              color: colors.primary.withOpacity(0.08),
+              color: Colors.black.withOpacity(0.42),
               blurRadius: 28,
               offset: const Offset(0, 12),
             ),
           ],
         ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                Positioned.fill(
-                  bottom: 44,
-                  child: DecoratedBox(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF102C4D), Color(0xFF125788)],
-                      ),
-                    ),
-                    child: CustomPaint(painter: _WaterContourPainter()),
-                  ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF17253B).withOpacity(0.82),
+                    const Color(0xFF101624).withOpacity(0.75),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.09),
+                  width: 1.0,
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Stack(
                     children: [
-                      const Row(children: [
-                        Icon(Icons.water_drop_rounded,
-                            color: Color(0xFF8DDFF4), size: 20),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text('SIMONIKA / AKUN',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1.5)),
-                        ),
-                      ]),
-                      const SizedBox(height: 36),
-                      Semantics(
-                        label: 'Avatar pengguna',
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                              color: colors.surfaceContainerLowest,
-                              borderRadius: BorderRadius.circular(30)),
-                          child: Container(
-                            constraints: const BoxConstraints(
-                                minWidth: 76, minHeight: 76),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: colors.primaryContainer,
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(
-                                  color:
-                                      colors.primary.withOpacity(0.16)),
+                      Positioned.fill(
+                        bottom: 44,
+                        child: DecoratedBox(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFF102A4C),
+                                Color(0xFF1D4ED8),
+                              ],
                             ),
-                            child: Text(_initials,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    color: colors.onPrimaryContainer,
-                                    fontSize: 28,
-                                    height: 1.8,
-                                    fontWeight: FontWeight.w700)),
                           ),
+                          child: CustomPaint(painter: _WaterContourPainter()),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(children: [
+                              Icon(Icons.water_drop_rounded,
+                                  color: Color(0xFF93C5FD), size: 18),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text('SIMONIKA / AKUN',
+                                    style: TextStyle(
+                                        color: Color(0xFFE2E8F0),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 1.4)),
+                              ),
+                            ]),
+                            const SizedBox(height: 32),
+                            Semantics(
+                              label: 'Avatar pengguna',
+                              child: Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF111827),
+                                  borderRadius: BorderRadius.circular(28),
+                                ),
+                                child: Container(
+                                  constraints: const BoxConstraints(
+                                      minWidth: 74, minHeight: 74),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2563EB)
+                                        .withOpacity(0.22),
+                                    borderRadius: BorderRadius.circular(22),
+                                    border: Border.all(
+                                        color: const Color(0xFF3B82F6)
+                                            .withOpacity(0.35)),
+                                  ),
+                                  child: Text(
+                                    _initials,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Color(0xFFF8FAFC),
+                                      fontSize: 26,
+                                      height: 1.8,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_displayName,
-                      style: TextStyle(
-                          color: colors.onSurface,
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.8,
-                          height: 1.2)),
-                  const SizedBox(height: 8),
-                  Text(
-                      _username?.trim().isNotEmpty == true
-                          ? '@$_username'
-                          : 'Username tidak tersedia',
-                      style: TextStyle(
-                          color: colors.onSurfaceVariant,
-                          fontSize: 16,
-                          height: 1.5)),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: colors.primaryContainer.withOpacity(0.45),
-                      borderRadius: BorderRadius.circular(12),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 22),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _displayName,
+                          style: const TextStyle(
+                            color: Color(0xFFF8FAFC),
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.5,
+                            height: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _username?.trim().isNotEmpty == true
+                              ? '@$_username'
+                              : 'Username tidak tersedia',
+                          style: const TextStyle(
+                            color: Color(0xFF94A3B8),
+                            fontSize: 15,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2563EB).withOpacity(0.14),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color:
+                                  const Color(0xFF3B82F6).withOpacity(0.28),
+                            ),
+                          ),
+                          child: const Text(
+                            'Akun SIMONIKA',
+                            style: TextStyle(
+                              color: Color(0xFF60A5FA),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    child: Text('Akun SIMONIKA',
-                        style: TextStyle(
-                            color: colors.onSurface,
+                  ),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.03),
+                      border: Border(
+                        top: BorderSide(color: Colors.white.withOpacity(0.07)),
+                      ),
+                    ),
+                    child: const Row(children: [
+                      Icon(Icons.waves_rounded,
+                          color: Color(0xFF60A5FA), size: 20),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Satu akun untuk setiap tetes.',
+                          style: TextStyle(
+                            color: Color(0xFF94A3B8),
                             fontSize: 12,
-                            fontWeight: FontWeight.w700)),
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ]),
                   ),
                 ],
               ),
             ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(
-                color: colors.surfaceContainerLow,
-                border: Border(
-                    top: BorderSide(
-                        color: colors.outlineVariant.withOpacity(0.5))),
-              ),
-              child: Row(children: [
-                Icon(Icons.waves_rounded, color: colors.primary, size: 24),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text('Satu akun untuk setiap tetes.',
-                      style: TextStyle(
-                          color: colors.onSurfaceVariant,
-                          fontSize: 12,
-                          height: 1.5)),
-                ),
-              ]),
-            ),
-          ],
+          ),
         ),
       );
 
   Widget _errorCard(ColorScheme colors) => _surface(
         colors,
         Column(children: [
-          Icon(Icons.cloud_off_outlined, color: colors.primary, size: 32),
+          const Icon(Icons.cloud_off_outlined,
+              color: Color(0xFFF87171), size: 32),
           const SizedBox(height: 12),
-          Text(_error!,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  color: colors.onSurfaceVariant, fontSize: 16, height: 1.5)),
-          const SizedBox(height: 12),
+          Text(
+            _error!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 15,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 14),
           FilledButton.tonal(
-              onPressed: _fetching ? null : _fetchProfile,
-              child: const Text('Coba lagi')),
+            onPressed: _fetching ? null : _fetchProfile,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+              foregroundColor: const Color(0xFFF8FAFC),
+              shape: const StadiumBorder(),
+            ),
+            child: const Text(
+              'Coba lagi',
+              style: TextStyle(color: Color(0xFFF8FAFC)),
+            ),
+          ),
         ]),
       );
 
@@ -436,107 +607,171 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Semantics(
             header: true,
-            child: Text(title,
-                style: TextStyle(
-                    color: colors.onSurface,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.3)),
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFFF8FAFC),
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.3,
+              ),
+            ),
           ),
           const SizedBox(height: 4),
-          Text(subtitle,
-              style: TextStyle(
-                  color: colors.onSurfaceVariant, fontSize: 12, height: 1.5)),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 12,
+              height: 1.4,
+            ),
+          ),
         ],
       );
 
-  Widget _surface(ColorScheme colors, Widget child) => Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: colors.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(24),
-          border:
-              Border.all(color: colors.outlineVariant.withOpacity(0.6)),
-        ),
-        child: child,
-      );
-
-  Widget _iconTile(IconData icon, ColorScheme colors, {bool muted = false}) =>
+  Widget _surface(ColorScheme colors, Widget child,
+          {EdgeInsetsGeometry padding = const EdgeInsets.all(20)}) =>
       Container(
-        width: 44,
-        height: 44,
         decoration: BoxDecoration(
-          color: muted
-              ? colors.surfaceContainerHigh
-              : colors.primaryContainer.withOpacity(0.45),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.45),
+              blurRadius: 30,
+              offset: const Offset(0, 12),
+            ),
+          ],
         ),
-        child: Icon(icon,
-            color: muted ? colors.onSurfaceVariant : colors.primary, size: 22),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: Container(
+              padding: padding,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF181F30).withOpacity(0.76),
+                    const Color(0xFF101624).withOpacity(0.66),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.09),
+                  width: 1.0,
+                ),
+              ),
+              child: child,
+            ),
+          ),
+        ),
       );
 
-  Widget _info(String label, String value, IconData icon, ColorScheme colors) =>
+  Widget _iconTile(IconData icon, ColorScheme colors,
+      {bool muted = false, Color accent = const Color(0xFF3B82F6)}) {
+    final bg = muted
+        ? Colors.white.withOpacity(0.05)
+        : const Color(0xFF2563EB).withOpacity(0.15);
+    final fg = muted ? const Color(0xFF94A3B8) : const Color(0xFF60A5FA);
+    final border = muted
+        ? Colors.white.withOpacity(0.08)
+        : const Color(0xFF3B82F6).withOpacity(0.28);
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: border),
+      ),
+      child: Icon(icon, color: fg, size: 22),
+    );
+  }
+
+  Widget _info(String label, String value, IconData icon, ColorScheme colors,
+          {Color accent = const Color(0xFF3B82F6)}) =>
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _iconTile(icon, colors),
+        _iconTile(icon, colors, accent: accent),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style:
-                      TextStyle(color: colors.onSurfaceVariant, fontSize: 12)),
+              Text(
+                label,
+                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+              ),
               const SizedBox(height: 4),
-              Text(value,
-                  style: TextStyle(
-                      color: colors.onSurface,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      height: 1.5)),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Color(0xFFF8FAFC),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  height: 1.4,
+                ),
+              ),
             ],
           ),
         ),
       ]);
 
-  Widget _settingsCard(ColorScheme colors) => Material(
-        color: colors.surfaceContainerLowest,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: colors.outlineVariant.withOpacity(0.6)),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(children: [
-          _setting('Keamanan', 'Pengaturan kata sandi',
-              Icons.lock_outline_rounded, colors),
-          _settingDivider(colors),
-          _setting('Notifikasi', 'Preferensi pemberitahuan',
-              Icons.notifications_outlined, colors,
-              onTap: () => Navigator.pushNamed(context, '/notif')),
-          _settingDivider(colors),
-          _setting('Bantuan', 'Pusat bantuan SIMONIKA',
-              Icons.help_outline_rounded, colors),
-          _settingDivider(colors),
-          _setting('Tentang aplikasi', 'SIMONIKA • versi 1.0.0',
-              Icons.info_outline_rounded, colors,
+  Widget _settingsCard(ColorScheme colors) => _surface(
+        colors,
+        padding: EdgeInsets.zero,
+        Material(
+          color: Colors.transparent,
+          child: Column(children: [
+            _setting(
+              'Keamanan',
+              'Pengaturan kata sandi',
+              Icons.lock_outline_rounded,
+              colors,
+            ),
+            _settingDivider(colors),
+            _setting(
+              'Notifikasi',
+              'Preferensi pemberitahuan',
+              Icons.notifications_outlined,
+              colors,
+              onTap: () => Navigator.pushNamed(context, '/notif'),
+            ),
+            _settingDivider(colors),
+            _setting(
+              'Bantuan',
+              'Pusat bantuan SIMONIKA',
+              Icons.help_outline_rounded,
+              colors,
+            ),
+            _settingDivider(colors),
+            _setting(
+              'Tentang aplikasi',
+              'SIMONIKA • versi 1.0.0',
+              Icons.info_outline_rounded,
+              colors,
               onTap: () => showAboutDialog(
-                    context: context,
-                    applicationName: 'SIMONIKA',
-                    applicationVersion: '1.0.0',
-                    applicationIcon: Icon(Icons.water_drop_outlined,
-                        color: colors.primary, size: 40),
-                    children: [
-                      const Text(
-                          'Sistem Monitoring dan Kendali Air. Pantau kondisi air dan kelola wadah Anda dalam satu aplikasi.'),
-                    ],
-                  )),
-        ]),
+                context: context,
+                applicationName: 'SIMONIKA',
+                applicationVersion: '1.0.0',
+                applicationIcon: const Icon(Icons.water_drop_outlined,
+                    color: Color(0xFF60A5FA), size: 40),
+                children: const [
+                  Text(
+                      'Sistem Monitoring dan Kendali Air. Pantau kondisi air dan kelola wadah Anda dalam satu aplikasi.'),
+                ],
+              ),
+            ),
+          ]),
+        ),
       );
 
   Widget _settingDivider(ColorScheme colors) => Divider(
       height: 1,
       indent: 80,
       endIndent: 20,
-      color: colors.outlineVariant.withOpacity(0.6));
+      color: Colors.white.withOpacity(0.07));
 
   Widget _setting(
       String title, String subtitle, IconData icon, ColorScheme colors,
@@ -557,29 +792,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: TextStyle(
-                          color: colors.onSurface,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700)),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: pending
+                          ? const Color(0xFFCBD5E1)
+                          : const Color(0xFFF8FAFC),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(subtitle,
-                      style: TextStyle(
-                          color: colors.onSurfaceVariant,
-                          fontSize: 12,
-                          height: 1.5)),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: Color(0xFF94A3B8),
+                      fontSize: 12,
+                      height: 1.5,
+                    ),
+                  ),
                   if (pending) ...[
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                          horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: colors.surfaceContainerLow,
+                        color: Colors.white.withOpacity(0.06),
                         borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.08),
+                        ),
                       ),
-                      child: Text('Segera hadir',
-                          style: TextStyle(
-                              color: colors.onSurfaceVariant, fontSize: 12)),
+                      child: const Text(
+                        'Segera hadir',
+                        style: TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ],
                 ],
@@ -587,10 +838,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             if (!pending) ...[
               const SizedBox(width: 8),
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
+              const Padding(
+                padding: EdgeInsets.only(top: 10),
                 child: Icon(Icons.chevron_right_rounded,
-                    size: 24, color: colors.onSurfaceVariant),
+                    size: 24, color: Color(0xFF94A3B8)),
               ),
             ],
           ]),

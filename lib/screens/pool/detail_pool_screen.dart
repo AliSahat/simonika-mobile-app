@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -245,73 +246,316 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final colors = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF087E8B),
-      brightness: dark ? Brightness.dark : Brightness.light,
+      seedColor: const Color(0xFF2563EB),
+      brightness: Brightness.dark,
     );
     return Theme(
-      data: Theme.of(context).copyWith(colorScheme: colors),
+      data: Theme.of(context).copyWith(
+        brightness: Brightness.dark,
+        colorScheme: colors,
+      ),
       child: Scaffold(
-        backgroundColor: dark ? colors.surface : const Color(0xFFF3F8F8),
+        backgroundColor: const Color(0xFF060911),
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
-          title: const Text('Detail wadah',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-          backgroundColor: dark ? colors.surface : const Color(0xFFF3F8F8),
-          foregroundColor: colors.onSurface,
+          centerTitle: true,
+          leadingWidth: 60,
+          backgroundColor: Colors.transparent,
+          foregroundColor: const Color(0xFFF8FAFC),
           surfaceTintColor: Colors.transparent,
-          actions: [
-            IconButton(
-              tooltip: 'Perbarui monitoring',
-              onPressed: isLoadingWater
-                  ? null
-                  : () {
-                      if (poolData == null) _fetchDetail();
-                      _fetchWater();
-                    },
-              icon: AnimatedSwitcher(
-                duration: MediaQuery.disableAnimationsOf(context)
-                    ? Duration.zero
-                    : const Duration(milliseconds: 220),
-                child: isLoadingWater
-                    ? SizedBox(
-                        key: const ValueKey('loading'),
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.2,
-                          color: colors.primary,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: Padding(
+            padding: const EdgeInsets.only(left: 16),
+            child: Center(
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            const Color(0xFF1E3A8A).withOpacity(0.55),
+                            const Color(0xFF1E293B).withOpacity(0.85),
+                            const Color(0xFF0F172A).withOpacity(0.90),
+                          ],
                         ),
-                      )
-                    : const Icon(Icons.refresh_rounded,
-                        key: ValueKey('refresh')),
+                        border: Border.all(
+                          color: const Color(0xFF60A5FA).withOpacity(0.28),
+                        ),
+                      ),
+                      child: BackButton(
+                        color: const Color(0xFFF8FAFC),
+                        style: ButtonStyle(
+                          padding: WidgetStateProperty.all(EdgeInsets.zero),
+                          iconSize: WidgetStateProperty.all(18),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-          ],
-        ),
-        body: AnimatedSwitcher(
-          duration: MediaQuery.disableAnimationsOf(context)
-              ? Duration.zero
-              : const Duration(milliseconds: 280),
-          child: isLoading
-              ? _loadingState(colors)
-              : poolData == null
-                  ? _errorState(colors)
-                  : Center(
-                      key: const ValueKey('content'),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 760),
-                        child: SafeArea(
-                          top: false,
-                          child: FadeTransition(
-                            opacity: _entranceController
-                                .drive(CurveTween(curve: Curves.easeOutCubic)),
-                            child: _contentSlides(colors),
+          ),
+          title: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Container(
+              height: 40,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.35),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFF1E3A8A).withOpacity(0.55),
+                          const Color(0xFF0E7490).withOpacity(0.42),
+                          const Color(0xFF0F172A).withOpacity(0.90),
+                        ],
+                      ),
+                      border: Border.all(
+                        color: const Color(0xFF60A5FA).withOpacity(0.28),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF38BDF8),
+                            boxShadow: [
+                              BoxShadow(
+                                color:
+                                    const Color(0xFF38BDF8).withOpacity(0.65),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 9),
+                        const Text(
+                          'Detail wadah',
+                          style: TextStyle(
+                            color: Color(0xFFF8FAFC),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.35),
+                        blurRadius: 14,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFF1E3A8A).withOpacity(0.55),
+                              const Color(0xFF1E293B).withOpacity(0.85),
+                              const Color(0xFF0F172A).withOpacity(0.90),
+                            ],
+                          ),
+                          border: Border.all(
+                            color: const Color(0xFF60A5FA).withOpacity(0.28),
+                          ),
+                        ),
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          tooltip: 'Perbarui monitoring',
+                          onPressed: isLoadingWater
+                              ? null
+                              : () {
+                                  if (poolData == null) _fetchDetail();
+                                  _fetchWater();
+                                },
+                          icon: AnimatedSwitcher(
+                            duration: MediaQuery.disableAnimationsOf(context)
+                                ? Duration.zero
+                                : const Duration(milliseconds: 220),
+                            child: isLoadingWater
+                                ? const SizedBox(
+                                    key: ValueKey('loading'),
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.2,
+                                      color: Color(0xFF60A5FA),
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.refresh_rounded,
+                                    key: ValueKey('refresh'),
+                                    size: 19,
+                                    color: Color(0xFF60A5FA),
+                                  ),
                           ),
                         ),
                       ),
                     ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      top: -40,
+                      right: -30,
+                      child: ImageFiltered(
+                        imageFilter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
+                        child: Container(
+                          width: 220,
+                          height: 220,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFFF59E0B).withOpacity(0.32),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 200,
+                      left: -60,
+                      child: ImageFiltered(
+                        imageFilter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                        child: Container(
+                          width: 250,
+                          height: 250,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF2563EB).withOpacity(0.28),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 80,
+                      left: 60,
+                      child: ImageFiltered(
+                        imageFilter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
+                        child: Container(
+                          width: 220,
+                          height: 220,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF10B981).withOpacity(0.22),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -40,
+                      right: -30,
+                      child: ImageFiltered(
+                        imageFilter: ImageFilter.blur(sigmaX: 90, sigmaY: 90),
+                        child: Container(
+                          width: 230,
+                          height: 230,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF06B6D4).withOpacity(0.26),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SafeArea(
+              child: AnimatedSwitcher(
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : const Duration(milliseconds: 280),
+                child: isLoading
+                    ? _loadingState(colors)
+                    : poolData == null
+                        ? _errorState(colors)
+                        : Center(
+                            key: const ValueKey('content'),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 760),
+                              child: FadeTransition(
+                                opacity: _entranceController.drive(
+                                    CurveTween(curve: Curves.easeOutCubic)),
+                                child: _contentSlides(colors),
+                              ),
+                            ),
+                          ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -339,34 +583,50 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(children: [
-                for (var index = 0; index < _pageLabels.length; index++)
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(right: index == 2 ? 0 : 8),
-                      child: Semantics(
-                        selected: _currentPage == index,
-                        child: TextButton(
-                          onPressed: () => _selectPage(index),
-                          style: TextButton.styleFrom(
-                            minimumSize: const Size(48, 48),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 12),
-                            foregroundColor: _currentPage == index
-                                ? colors.onPrimary
-                                : colors.onSurfaceVariant,
-                            backgroundColor: _currentPage == index
-                                ? colors.primary
-                                : colors.surfaceContainerLow,
-                          ),
-                          child: Text(_pageLabels[index],
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Colors.white.withOpacity(0.09)),
+                ),
+                child: Row(children: [
+                  for (var index = 0; index < _pageLabels.length; index++)
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(right: index == 2 ? 0 : 6),
+                        child: Semantics(
+                          selected: _currentPage == index,
+                          child: TextButton(
+                            onPressed: () => _selectPage(index),
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(48, 48),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 10),
+                              foregroundColor: _currentPage == index
+                                  ? const Color(0xFFF8FAFC)
+                                  : const Color(0xFF94A3B8),
+                              backgroundColor: _currentPage == index
+                                  ? const Color(0xFF2563EB)
+                                  : Colors.transparent,
+                              shape: const StadiumBorder(),
+                            ),
+                            child: Text(
+                              _pageLabels[index],
                               textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 12)),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: _currentPage == index
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ]),
+                ]),
+              ),
             ),
             const SizedBox(height: 8),
             Expanded(
@@ -376,6 +636,9 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
                 onPageChanged: (index) => setState(() => _currentPage = index),
                 itemBuilder: (context, index) => SingleChildScrollView(
                   key: PageStorageKey('pool-slide-$index'),
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                   child: switch (index) {
                     0 => _levelCard(colors),
@@ -403,8 +666,8 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
                             height: 8,
                             decoration: BoxDecoration(
                               color: _currentPage == index
-                                  ? colors.primary
-                                  : colors.outlineVariant,
+                                  ? const Color(0xFF3B82F6)
+                                  : Colors.white.withOpacity(0.18),
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
@@ -423,23 +686,27 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: colors.primaryContainer,
+              color: const Color(0xFF2563EB).withOpacity(0.18),
               shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withOpacity(0.09)),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(18),
+            child: const Padding(
+              padding: EdgeInsets.all(18),
               child: CircularProgressIndicator(
                 strokeWidth: 3,
-                color: colors.primary,
+                color: Color(0xFF3B82F6),
               ),
             ),
           ),
           const SizedBox(height: 16),
-          Text('Menyiapkan data wadah…',
-              style: TextStyle(
-                  color: colors.onSurfaceVariant,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600)),
+          const Text(
+            'Menyiapkan data wadah…',
+            style: TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ]),
       );
 
@@ -447,47 +714,62 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
         key: const ValueKey('error-state'),
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Container(
+          child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 400),
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: colors.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: colors.outlineVariant),
-            ),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: colors.errorContainer,
-                  shape: BoxShape.circle,
+            child: _card(
+              colors,
+              Column(mainAxisSize: MainAxisSize.min, children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withOpacity(0.14),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.cloud_off_rounded,
+                    size: 32,
+                    color: Color(0xFFF87171),
+                  ),
                 ),
-                child: Icon(Icons.cloud_off_rounded,
-                    size: 32, color: colors.onErrorContainer),
-              ),
-              const SizedBox(height: 20),
-              Text('Data belum bisa ditampilkan',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: colors.onSurface,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-              Text(_detailError ?? 'Detail wadah tidak tersedia.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: colors.onSurfaceVariant,
-                      fontSize: 14,
-                      height: 1.5)),
-              if (_poolId != null) ...[
                 const SizedBox(height: 20),
-                FilledButton.icon(
-                  onPressed: _fetchDetail,
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Coba lagi'),
+                const Text(
+                  'Data belum bisa ditampilkan',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFFF8FAFC),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ],
-            ]),
+                const SizedBox(height: 8),
+                Text(
+                  _detailError ?? 'Detail wadah tidak tersedia.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+                if (_poolId != null) ...[
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: _fetchDetail,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      foregroundColor: const Color(0xFFF8FAFC),
+                      shape: const StadiumBorder(),
+                    ),
+                    icon: const Icon(Icons.refresh_rounded,
+                        color: Color(0xFFF8FAFC)),
+                    label: const Text(
+                      'Coba lagi',
+                      style: TextStyle(color: Color(0xFFF8FAFC)),
+                    ),
+                  ),
+                ],
+              ]),
+            ),
           ),
         ),
       );
@@ -495,24 +777,39 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
   Widget _heroHeader(ColorScheme colors, {bool compact = false}) {
     final active = poolData!['isActive'] == true;
     if (compact) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF086F7B),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(children: [
-          const Icon(Icons.water_drop_rounded, color: Colors.white),
+      return _card(
+        colors,
+        isHero: true,
+        Row(children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: active ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+              boxShadow: [
+                BoxShadow(
+                  color: (active
+                          ? const Color(0xFF10B981)
+                          : const Color(0xFFF59E0B))
+                      .withOpacity(0.6),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+          ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text('${poolData!['namaWadah'] ?? 'Wadah air'}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700)),
+            child: Text(
+              '${poolData!['namaWadah'] ?? 'Wadah air'}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFFF8FAFC),
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ]),
       );
@@ -521,90 +818,88 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
       container: true,
       label:
           '${poolData!['namaWadah'] ?? 'Wadah air'}, ${active ? 'aktif' : 'nonaktif'}',
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF086F7B), Color(0xFF0B8FA0)],
-          ),
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF087E8B).withOpacity(0.22),
-              blurRadius: 28,
-              offset: const Offset(0, 12),
+      child: _card(
+        colors,
+        isHero: true,
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2563EB).withOpacity(0.20),
+              borderRadius: BorderRadius.circular(14),
+              border:
+                  Border.all(color: const Color(0xFF3B82F6).withOpacity(0.35)),
             ),
-          ],
-        ),
-        child: Stack(children: [
-          Positioned(
-            right: -28,
-            top: -36,
-            child: Container(
-              width: 132,
-              height: 132,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.08),
-              ),
+            child: const Icon(
+              Icons.water_drop_rounded,
+              color: Color(0xFF3B82F6),
+              size: 24,
             ),
           ),
-          Positioned(
-            right: 44,
-            bottom: -56,
-            child: Container(
-              width: 112,
-              height: 112,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.06),
-              ),
-            ),
-          ),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.16),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withOpacity(0.18)),
-              ),
-              child: const Icon(Icons.water_drop_rounded,
-                  color: Colors.white, size: 24),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('${poolData!['namaWadah'] ?? 'Wadah air'}',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          height: 1.2)),
-                  const SizedBox(height: 8),
-                  Text('Serial • ${poolData!['serial'] ?? '—'}',
-                      style: TextStyle(
-                          color: Colors.white.withOpacity(0.78),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 12),
-                  Wrap(spacing: 8, runSpacing: 8, children: [
-                    _lightBadge(
-                      active ? 'Wadah aktif' : 'Wadah nonaktif',
-                      active
-                          ? Icons.check_circle_rounded
-                          : Icons.pause_circle_rounded,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${poolData!['namaWadah'] ?? 'Wadah air'}',
+                  style: const TextStyle(
+                    color: Color(0xFFF8FAFC),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: active
+                            ? const Color(0xFF10B981)
+                            : const Color(0xFFF59E0B),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (active
+                                    ? const Color(0xFF10B981)
+                                    : const Color(0xFFF59E0B))
+                                .withOpacity(0.6),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
                     ),
-                    _lightBadge('Sinkron tiap 5 detik', Icons.sync_rounded),
-                  ]),
-                ],
-              ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Serial • ${poolData!['serial'] ?? '—'}',
+                        style: const TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  _lightBadge(
+                    active ? 'Wadah aktif' : 'Wadah nonaktif',
+                    active
+                        ? Icons.check_circle_rounded
+                        : Icons.pause_circle_rounded,
+                    isLive: active,
+                  ),
+                  _lightBadge('Sinkron tiap 5 detik', Icons.sync_rounded),
+                ]),
+              ],
             ),
-          ]),
+          ),
         ]),
       ),
     );
@@ -654,12 +949,13 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
           levelLabel,
           key: ValueKey(levelLabel),
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: colors.primary,
-            fontSize: 44,
+          style: const TextStyle(
+            color: Color(0xFFF8FAFC),
+            fontSize: 38,
             height: 1,
-            letterSpacing: -1.5,
-            fontWeight: FontWeight.w800,
+            letterSpacing: -1.0,
+            fontWeight: FontWeight.w700,
+            fontFeatures: [FontFeature.tabularFigures()],
           ),
         ),
       ),
@@ -669,17 +965,25 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
           '${_level == null ? '—' : '${_level!.toStringAsFixed(1)}%'} • '
           'Kedalaman ${depth.toStringAsFixed(depth % 1 == 0 ? 0 : 1)} cm',
           textAlign: TextAlign.center,
-          style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12),
+          style: const TextStyle(
+            color: Color(0xFF94A3B8),
+            fontSize: 12,
+            fontFeatures: [FontFeature.tabularFigures()],
+          ),
         ),
         const SizedBox(height: 8),
       ],
-      Text(subtitle,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-              color:
-                  _waterError == null ? colors.onSurfaceVariant : colors.error,
-              fontSize: 12,
-              fontWeight: FontWeight.w600)),
+      Text(
+        subtitle,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: _waterError == null
+              ? const Color(0xFF34D399)
+              : const Color(0xFFF87171),
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     ]);
 
     final details = Column(
@@ -692,22 +996,32 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
         if (timestamp != null) ...[
           const SizedBox(height: 16),
           Row(children: [
-            Icon(Icons.schedule_rounded,
-                size: 16, color: colors.onSurfaceVariant),
+            const Icon(Icons.schedule_rounded,
+                size: 16, color: Color(0xFF94A3B8)),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 'Diperbarui ${timestamp.toString().split('.').first}',
-                style: TextStyle(
-                    color: colors.onSurfaceVariant, fontSize: 12, height: 1.5),
+                style: const TextStyle(
+                  color: Color(0xFF94A3B8),
+                  fontSize: 12,
+                  height: 1.5,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
               ),
             ),
           ]),
         ],
         if (_waterError != null) ...[
           const SizedBox(height: 12),
-          Text(_waterError!,
-              style: TextStyle(color: colors.error, fontSize: 12, height: 1.5)),
+          Text(
+            _waterError!,
+            style: const TextStyle(
+              color: Color(0xFFF87171),
+              fontSize: 12,
+              height: 1.5,
+            ),
+          ),
         ],
       ],
     );
@@ -721,11 +1035,11 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
           Icons.waves_rounded,
           colors,
           trailing: isLoadingWater
-              ? SizedBox(
+              ? const SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: colors.primary),
+                      strokeWidth: 2, color: Color(0xFF3B82F6)),
                 )
               : null,
         ),
@@ -759,15 +1073,19 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colors.primaryContainer.withOpacity(0.45),
+        color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.09)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Aliran air',
-            style: TextStyle(
-                color: colors.onSurface,
-                fontSize: 14,
-                fontWeight: FontWeight.w700)),
+        const Text(
+          'Aliran air',
+          style: TextStyle(
+            color: Color(0xFFF8FAFC),
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         const SizedBox(height: 12),
         Wrap(spacing: 8, runSpacing: 8, children: [
           _stateChip(
@@ -796,31 +1114,46 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
   }
 
   Widget _automationPanel(ColorScheme colors) => Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: colors.surfaceContainerLow,
+          color: Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(20),
-          border:
-              Border.all(color: colors.outlineVariant.withOpacity(0.55)),
+          border: Border.all(color: Colors.white.withOpacity(0.09)),
         ),
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child:
-                Icon(Icons.auto_mode_rounded, color: colors.primary, size: 24),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB).withOpacity(0.16),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.auto_mode_rounded,
+                  color: Color(0xFF60A5FA),
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Status otomatis',
+                  style: TextStyle(
+                    color: Color(0xFFF8FAFC),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text('Status otomatis',
-              style: TextStyle(
-                  color: colors.onSurface,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           _statusReading('Mode kendali', _controlState, colors),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Divider(height: 1, color: colors.outlineVariant),
+            child: Divider(height: 1, color: Colors.white.withOpacity(0.06)),
           ),
           _statusReading('Status valve', _valveState, colors),
         ]),
@@ -907,16 +1240,18 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
             Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                    color: colors.primaryContainer.withOpacity(0.32),
-                    borderRadius: BorderRadius.circular(20)),
-                child: Column(children: [
-                  Icon(Icons.timeline_rounded, color: colors.primary, size: 28),
-                  const SizedBox(height: 12),
+                    color: Colors.white.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withOpacity(0.08))),
+                child: const Column(children: [
+                  Icon(Icons.timeline_rounded,
+                      color: Color(0xFF3B82F6), size: 28),
+                  SizedBox(height: 12),
                   Text(
                       'Grafik akan muncul setelah dua pembacaan sensor diterima.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                          color: colors.onSurfaceVariant,
+                          color: Color(0xFF94A3B8),
                           fontSize: 14,
                           height: 1.5)),
                 ]))
@@ -928,8 +1263,9 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
                     height: 196,
                     padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
                     decoration: BoxDecoration(
-                      color: colors.surfaceContainerLow,
+                      color: Colors.white.withOpacity(0.04),
                       borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withOpacity(0.08)),
                     ),
                     child: LineChart(LineChartData(
                       minY: 0,
@@ -945,7 +1281,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
                           drawVerticalLine: false,
                           horizontalInterval: 25,
                           getDrawingHorizontalLine: (_) => FlLine(
-                              color: colors.outlineVariant,
+                              color: Colors.white.withOpacity(0.05),
                               strokeWidth: 1,
                               dashArray: [4, 4])),
                       titlesData: const FlTitlesData(show: false),
@@ -960,7 +1296,7 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
                                   s.level))
                               .toList(),
                           isCurved: false,
-                          color: colors.primary,
+                          color: const Color(0xFF3B82F6),
                           barWidth: 3,
                           isStrokeCapRound: true,
                           dotData: FlDotData(
@@ -968,9 +1304,9 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
                             getDotPainter: (_, __, ___, ____) =>
                                 FlDotCirclePainter(
                               radius: 3,
-                              color: colors.primary,
+                              color: const Color(0xFF3B82F6),
                               strokeWidth: 2,
-                              strokeColor: colors.surfaceContainerLowest,
+                              strokeColor: const Color(0xFF060911),
                             ),
                           ),
                           belowBarData: BarAreaData(
@@ -979,8 +1315,8 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                                 colors: [
-                                  colors.primary.withOpacity(0.20),
-                                  colors.primary.withOpacity(0.01),
+                                  const Color(0xFF2563EB).withOpacity(0.25),
+                                  Colors.transparent,
                                 ],
                               )),
                         )
@@ -999,10 +1335,10 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
           ]),
           if (_tankThresholds.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Text(
+            const Text(
                 'Penanda tangki menunjukkan ambang pengisian dan pembuangan yang tersimpan.',
                 style: TextStyle(
-                    color: colors.onSurfaceVariant, fontSize: 12, height: 1.5)),
+                    color: Color(0xFF94A3B8), fontSize: 12, height: 1.5)),
           ],
         ]));
   }
@@ -1015,10 +1351,12 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: colors.primaryContainer,
+            color: const Color(0xFF2563EB).withOpacity(0.20),
             borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+                color: const Color(0xFF3B82F6).withOpacity(0.30)),
           ),
-          child: Icon(icon, color: colors.onPrimaryContainer, size: 22),
+          child: Icon(icon, color: const Color(0xFF3B82F6), size: 22),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -1026,15 +1364,15 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title,
-                  style: TextStyle(
-                      color: colors.onSurface,
+                  style: const TextStyle(
+                      color: Color(0xFFF8FAFC),
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                       height: 1.25)),
               const SizedBox(height: 4),
               Text(subtitle,
-                  style: TextStyle(
-                      color: colors.onSurfaceVariant,
+                  style: const TextStyle(
+                      color: Color(0xFF94A3B8),
                       fontSize: 12,
                       height: 1.4)),
             ],
@@ -1046,22 +1384,37 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
         ],
       ]);
 
-  Widget _lightBadge(String label, IconData icon) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+  Widget _lightBadge(String label, IconData icon, {bool isLive = false}) =>
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.14),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.14)),
+          color: isLive
+              ? const Color(0xFF10B981).withOpacity(0.14)
+              : Colors.white.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: isLive
+                ? const Color(0xFF10B981).withOpacity(0.28)
+                : Colors.white.withOpacity(0.09),
+          ),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 16, color: Colors.white),
+          Icon(
+            icon,
+            size: 14,
+            color: isLive ? const Color(0xFF34D399) : const Color(0xFFF8FAFC),
+          ),
           const SizedBox(width: 6),
           Flexible(
-            child: Text(label,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600)),
+            child: Text(
+              label,
+              style: TextStyle(
+                color:
+                    isLive ? const Color(0xFF34D399) : const Color(0xFFF8FAFC),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ]),
       );
@@ -1073,29 +1426,35 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
             ? Duration.zero
             : const Duration(milliseconds: 280),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: active
-              ? colors.primary.withOpacity(0.12)
-              : colors.surfaceContainerLowest.withOpacity(0.72),
-          borderRadius: BorderRadius.circular(12),
+              ? const Color(0xFF10B981).withOpacity(0.14)
+              : Colors.white.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(999),
           border: Border.all(
             color: active
-                ? colors.primary.withOpacity(0.28)
-                : colors.outlineVariant.withOpacity(0.60),
+                ? const Color(0xFF10B981).withOpacity(0.28)
+                : Colors.white.withOpacity(0.09),
           ),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon,
-              size: 16,
-              color: active ? colors.primary : colors.onSurfaceVariant),
+          Icon(
+            icon,
+            size: 15,
+            color: active ? const Color(0xFF34D399) : const Color(0xFF94A3B8),
+          ),
           const SizedBox(width: 6),
           Flexible(
-            child: Text(label,
-                style: TextStyle(
-                    color: active ? colors.primary : colors.onSurfaceVariant,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600)),
+            child: Text(
+              label,
+              style: TextStyle(
+                color:
+                    active ? const Color(0xFF34D399) : const Color(0xFF94A3B8),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ]),
       );
@@ -1104,15 +1463,21 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12)),
+          Text(
+            label,
+            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+          ),
           const SizedBox(height: 4),
-          Text(value,
-              style: TextStyle(
-                  color: colors.onSurface,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  height: 1.35)),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Color(0xFFF8FAFC),
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              height: 1.35,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
         ],
       );
 
@@ -1121,20 +1486,22 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
       Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: colors.surfaceContainerLow,
+          color: Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(20),
-          border:
-              Border.all(color: colors.outlineVariant.withOpacity(0.55)),
+          border: Border.all(color: Colors.white.withOpacity(0.09)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Icon(icon, size: 18, color: colors.primary),
+            Icon(icon, size: 18, color: const Color(0xFF3B82F6)),
             const SizedBox(width: 8),
-            Text(title,
-                style: TextStyle(
-                    color: colors.onSurface,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700)),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFFF8FAFC),
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ]),
           const SizedBox(height: 16),
           LayoutBuilder(builder: (context, constraints) {
@@ -1163,53 +1530,109 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
         width: double.infinity,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: colors.surfaceContainerLowest,
+          color: Colors.white.withOpacity(0.04),
           borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withOpacity(0.08)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label,
-              style: TextStyle(
-                  color: colors.onSurfaceVariant, fontSize: 12, height: 1.35)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 12,
+              height: 1.35,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text(value,
-              style: TextStyle(
-                  color: colors.onSurface,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Color(0xFFF8FAFC),
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
         ]),
       );
 
-  Widget _card(ColorScheme colors, Widget child) => Container(
-        padding: const EdgeInsets.all(24),
+  Widget _card(ColorScheme colors, Widget child, {bool isHero = false}) =>
+      Container(
         decoration: BoxDecoration(
-            color: colors.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-                color: colors.outlineVariant.withOpacity(0.62)),
-            boxShadow: [
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.45),
+              blurRadius: 30,
+              offset: const Offset(0, 12),
+            ),
+            if (isHero)
               BoxShadow(
-                color: colors.primary.withOpacity(0.055),
-                blurRadius: 24,
+                color: const Color(0xFF2563EB).withOpacity(0.24),
+                blurRadius: 28,
                 offset: const Offset(0, 8),
               ),
-            ]),
-        child: child,
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isHero
+                      ? [
+                          const Color(0xFF1E40AF).withOpacity(0.72),
+                          const Color(0xFF0E7490).withOpacity(0.62),
+                          const Color(0xFF1E293B).withOpacity(0.78),
+                        ]
+                      : [
+                          const Color(0xFF181F30).withOpacity(0.76),
+                          const Color(0xFF101624).withOpacity(0.66),
+                        ],
+                ),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: isHero
+                      ? const Color(0xFF60A5FA).withOpacity(0.28)
+                      : Colors.white.withOpacity(0.09),
+                  width: 1.0,
+                ),
+              ),
+              child: child,
+            ),
+          ),
+        ),
       );
 
   Widget _badge(String label, IconData icon, ColorScheme colors) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-            color: colors.primaryContainer,
-            borderRadius: BorderRadius.circular(10)),
+          color: const Color(0xFF10B981).withOpacity(0.14),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: const Color(0xFF10B981).withOpacity(0.28),
+          ),
+        ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 16, color: colors.onPrimaryContainer),
+          Icon(icon, size: 15, color: const Color(0xFF34D399)),
           const SizedBox(width: 6),
           Flexible(
-              child: Text(label,
-                  style: TextStyle(
-                      color: colors.onPrimaryContainer,
-                      fontSize: 12,
-                      height: 1.4)))
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF34D399),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
         ]),
       );
 
@@ -1218,31 +1641,43 @@ class _DetailPoolScreenState extends State<DetailPoolScreen>
       Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-            color: colors.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(14)),
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withOpacity(0.09)),
+        ),
         child: LayoutBuilder(builder: (context, constraints) {
-          final title = Text(label,
-              style: TextStyle(
-                  color: colors.onSurfaceVariant, fontSize: 13, height: 1.5));
-          final reading = Text(value,
-              style: TextStyle(
-                  color: colors.onSurface,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700));
+          final title = Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 13,
+              height: 1.5,
+            ),
+          );
+          final reading = Text(
+            value,
+            style: const TextStyle(
+              color: Color(0xFFF8FAFC),
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          );
           if (constraints.maxWidth < 260 ||
               MediaQuery.textScalerOf(context).scale(14) > 22) {
             return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [title, const SizedBox(height: 6), reading]);
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [title, const SizedBox(height: 6), reading],
+            );
           }
           return Row(children: [
             if (icon != null) ...[
-              Icon(icon, size: 20, color: colors.primary),
-              const SizedBox(width: 10)
+              Icon(icon, size: 20, color: const Color(0xFF3B82F6)),
+              const SizedBox(width: 10),
             ],
             Expanded(child: title),
             const SizedBox(width: 12),
-            Flexible(child: reading)
+            Flexible(child: reading),
           ]);
         }),
       );
